@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 export default function Login() {
@@ -28,7 +28,7 @@ export default function Login() {
 
     if (!strongPasswordRegex.test(password)) {
       alert(
-        "Password must be at least 12 characters and include:\n" +
+        "Password must be at least 6 characters and include:\n" +
         "- Uppercase letter\n- Lowercase letter\n- Number\n- Special character"
       );
       return;
@@ -150,6 +150,19 @@ export default function Login() {
           />
           <span className="text-gray-700 dark:text-gray-300">Sign in with Google</span>
         </button>
+
+        {/* Register Link */}
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
+            >
+              Sign up here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

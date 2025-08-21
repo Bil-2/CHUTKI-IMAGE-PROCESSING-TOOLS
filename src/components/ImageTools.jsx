@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const tools = {
   "Image Editing Tools": [
@@ -32,38 +32,86 @@ const tools = {
   ]
 };
 
-const ImageTools = ({ searchQuery = "" }) => {
-  const lowerSearch = searchQuery.toLowerCase();
+const ImageTools = ({ searchQuery }) => {
+  const getToolLink = (toolName) => {
+    const toolNameLower = toolName.toLowerCase();
+
+    // Special cases for tools with specific routes
+    if (toolNameLower.includes("passport photo maker")) {
+      return "/passport-photo";
+    }
+    if (toolNameLower.includes("heic to jpg")) {
+      return "/tools/heic-to-jpg";
+    }
+    if (toolNameLower.includes("webp to jpg")) {
+      return "/tools/webp-to-jpg";
+    }
+    if (toolNameLower.includes("jpeg to png")) {
+      return "/tools/jpeg-to-png";
+    }
+    if (toolNameLower.includes("png to jpeg")) {
+      return "/tools/png-to-jpeg";
+    }
+
+    // Default route for other tools
+    return "/tools";
+  };
+
+  const filteredTools = {};
+
+  Object.keys(tools).forEach(category => {
+    const filteredCategory = tools[category].filter(tool =>
+      tool.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    if (filteredCategory.length > 0) {
+      filteredTools[category] = filteredCategory;
+    }
+  });
 
   return (
-    <div className="min-h-screen px-4 py-6 bg-white text-gray-900 dark:bg-gray-900 dark:text-white transition-colors duration-300">
-      <div className="max-w-6xl mx-auto">
-        {Object.entries(tools).map(([category, toolList]) => {
-          const filteredTools = toolList.filter((tool) =>
-            tool.toLowerCase().includes(lowerSearch)
-          );
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      {Object.keys(filteredTools).map((category) => (
+        <div key={category} className="mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+            {category}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {filteredTools[category].map((tool, index) => (
+              <Link
+                key={index}
+                to={getToolLink(tool)}
+                className="group bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white text-lg font-bold group-hover:scale-110 transition-transform duration-300">
+                    {tool.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 truncate">
+                      {tool}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Click to use
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
 
-          // Hide category if no match
-          if (filteredTools.length === 0) return null;
-
-          return (
-            <div key={category} className="mb-8">
-              <h2 className="text-lg sm:text-2xl font-semibold mb-4">{category}</h2>
-              <div className="flex flex-wrap gap-3">
-                {filteredTools.map((tool, index) => (
-                  <motion.button
-                    key={`${tool}-${index}`} // ✅ Unique key
-                    whileHover={{ scale: 1.05 }}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition bg-gradient-to-br from-purple-500 to-indigo-500 text-white hover:shadow-md"
-                  >
-                    {tool}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {Object.keys(filteredTools).length === 0 && searchQuery && (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            No tools found
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            Try searching for something else
+          </p>
+        </div>
+      )}
     </div>
   );
 };

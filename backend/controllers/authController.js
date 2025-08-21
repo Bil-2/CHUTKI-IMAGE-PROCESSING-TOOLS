@@ -1,5 +1,4 @@
 // controllers/authController.js
-
 // Login user (test mode)
 export const loginUser = async (req, res) => {
   try {

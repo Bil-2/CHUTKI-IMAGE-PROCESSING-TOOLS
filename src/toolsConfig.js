@@ -1,5 +1,4 @@
 // src/toolsConfig.js
-
 export const tools = [
   { title: "HEIC to JPG", slug: "heic-to-jpg", apiEndpoint: "/api/convert/heic-to-jpg" },
   { title: "WEBP to JPG", slug: "webp-to-jpg", apiEndpoint: "/api/convert/webp-to-jpg" },

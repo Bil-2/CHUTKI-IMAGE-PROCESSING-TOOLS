@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import User from "../models/User.js";
 
 dotenv.config();
 
@@ -12,19 +13,49 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/api/auth/google/callback",
     },
-    (accessToken, refreshToken, profile, done) => {
-      // Here, you can save or update user in your DB
-      const user = {
-        id: profile.id,
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        photo: profile.photos[0].value,
-      };
-      return done(null, user);
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        console.log("Google OAuth profile received:", {
+          id: profile.id,
+          displayName: profile.displayName,
+          email: profile.emails?.[0]?.value
+        });
+
+        // Use the static method to find or create user
+        const user = await User.findOrCreateGoogleUser(profile);
+
+        console.log("User found/created:", {
+          id: user._id,
+          email: user.email,
+          name: user.name
+        });
+
+        // Update last login
+        await user.updateLastLogin();
+
+        return done(null, user);
+      } catch (error) {
+        console.error("Google OAuth error:", error);
+        return done(error, null);
+      }
     }
   )
 );
 
-// Serialize/Deserialize (if using sessions)
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => {
+  console.log("Serializing user:", user.id);
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    console.log("Deserializing user:", id);
+    const user = await User.findById(id).select("-password");
+    done(null, user);
+  } catch (error) {
+    console.error("Deserialize error:", error);
+    done(error, null);
+  }
+});
+
+export default passport;

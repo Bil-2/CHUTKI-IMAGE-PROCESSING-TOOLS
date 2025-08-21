@@ -1,25 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import ImageTools from "./components/ImageTools";
 import ChutkiAssistant from "./components/ChutkiAssistant";
 import Footer from "./components/Footer";
 import ImageConversionTools from "./components/ImageConversionTools";
 import ToolPage from "./components/ToolPage";
+import PassportPhotoMaker from "./components/PassportPhotoMaker";
+import OAuthSuccess from "./OAuthSuccess";
+import Login from "./Login";
 import { tools } from "./toolsConfig";
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tokenChecked, setTokenChecked] = useState(false);
+
+  // ✅ Token handling
   const token = localStorage.getItem("token");
 
-  // ✅ Token check
   useEffect(() => {
-    if (!token) navigate("/login", { replace: true });
+    // Don't redirect if we're on oauth-success route
+    if (location.pathname === "/oauth-success") {
+      setTokenChecked(true);
+      return;
+    }
+
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
     setTokenChecked(true);
-  }, [token, navigate]);
+  }, [token, navigate, location.pathname]);
 
   // ✅ Dark mode toggle
   useEffect(() => {
@@ -30,14 +43,13 @@ function App() {
   const toggleMenu = () => setMenuOpen((prev) => !prev);
   const handleLogout = () => {
     localStorage.removeItem("token");
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
-  if (!tokenChecked) return null; // Wait until token check
+  if (!tokenChecked) return null; // Wait until token check finishes
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-
       {/* ========= HEADER ========= */}
       <header className="relative shadow-lg z-50">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
@@ -92,9 +104,8 @@ function App() {
 
       {/* ========= FULLSCREEN MENU ========= */}
       <div
-        className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transform transition-transform duration-500 ease-in-out ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
-        } overflow-y-auto`}
+        className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transform transition-transform duration-500 ease-in-out ${menuOpen ? "translate-x-0" : "translate-x-full"
+          } overflow-y-auto`}
       >
         <button
           onClick={toggleMenu}
@@ -133,7 +144,7 @@ function App() {
 
       {/* ========= ROUTES ========= */}
       <Routes>
-        {/* Home (default dashboard) */}
+        {/* Home */}
         <Route
           path="/"
           element={
@@ -169,28 +180,27 @@ function App() {
           }
         />
 
+        {/* Passport Photo Maker */}
+        <Route path="/passport-photo" element={<PassportPhotoMaker />} />
+
         {/* Image conversion tools */}
-        <Route
-          path="/tools"
-          element={<ImageConversionTools />}
-        />
+        <Route path="/tools" element={<ImageConversionTools />} />
         <Route
           path="/tools/heic-to-jpg"
-          element={<ToolPage title="HEIC to JPG" apiEndpoint="/api/heic-to-jpg" />}
+          element={<ToolPage title="HEIC to JPG" apiEndpoint="/api/convert/heic-to-jpg" />}
         />
         <Route
           path="/tools/webp-to-jpg"
-          element={<ToolPage title="WEBP to JPG" apiEndpoint="/api/webp-to-jpg" />}
+          element={<ToolPage title="WEBP to JPG" apiEndpoint="/api/convert/webp-to-jpg" />}
         />
         <Route
           path="/tools/jpeg-to-png"
-          element={<ToolPage title="JPEG to PNG" apiEndpoint="/api/jpeg-to-png" />}
+          element={<ToolPage title="JPEG to PNG" apiEndpoint="/api/convert/jpeg-to-png" />}
         />
         <Route
           path="/tools/png-to-jpeg"
-          element={<ToolPage title="PNG to JPEG" apiEndpoint="/api/png-to-jpeg" />}
+          element={<ToolPage title="PNG to JPEG" apiEndpoint="/api/convert/png-to-jpeg" />}
         />
-        {/* add more tool routes here */}
       </Routes>
     </div>
   );
