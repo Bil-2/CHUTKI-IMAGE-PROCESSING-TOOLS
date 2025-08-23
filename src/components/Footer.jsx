@@ -38,7 +38,7 @@ function Footer() {
           <div className="flex-1">
             <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">GIF Tools</h4>
             <ul className="space-y-2 text-sm">
-              {["GIF Maker", "GIF Compressor", "Add Text to GIFs", "Convert Video to GIF"].map((tool, i) => (
+              {["GIF Maker", "GIF Compressor", "Add Text to GIFs", ].map((tool, i) => (
                 <li
                   key={i}
                   className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
@@ -53,7 +53,7 @@ function Footer() {
           <div className="flex-1">
             <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">Chutki Tools</h4>
             <ul className="space-y-2 text-sm">
-              {["Chutki PDF Tool", "Bulk Image Resizer", "List of Image Tools"].map((tool, i) => (
+              {["Chutki PDF Tool", "Convert Video to GIF", "List of Image Tools"].map((tool, i) => (
                 <li
                   key={i}
                   className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
