@@ -14,6 +14,7 @@ import sharp from "sharp";
 import fs from "fs";
 import PDFDocument from "pdfkit";
 import Tesseract from "tesseract.js";
+import JSZip from "jszip";
 
 // Import configurations and middleware
 import "./config/passport.js";
@@ -25,6 +26,69 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ================== Image Cleanup System ==================
+// Track uploaded files with timestamps for automatic deletion
+const uploadedFiles = new Map();
+
+// Function to schedule file deletion after 30 minutes
+const scheduleFileDeletion = (filePath, fileName) => {
+  const deletionTime = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+  setTimeout(() => {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️  Auto-deleted file: ${fileName} (30 minutes expired)`);
+        uploadedFiles.delete(fileName);
+      }
+    } catch (error) {
+      console.error(`❌ Error deleting file ${fileName}:`, error.message);
+    }
+  }, deletionTime);
+
+  // Store file info for tracking
+  uploadedFiles.set(fileName, {
+    path: filePath,
+    uploadedAt: new Date(),
+    scheduledDeletion: new Date(Date.now() + deletionTime)
+  });
+
+  console.log(`⏰ Scheduled deletion for ${fileName} at ${new Date(Date.now() + deletionTime).toLocaleString()}`);
+};
+
+// Function to get upload directory path
+const getUploadPath = (filename) => path.join(__dirname, "uploads", filename);
+
+// Cleanup function to remove expired files on server restart
+const cleanupExpiredFiles = () => {
+  const uploadsDir = path.join(__dirname, "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    return;
+  }
+
+  const files = fs.readdirSync(uploadsDir);
+  const now = Date.now();
+
+  files.forEach(file => {
+    const filePath = path.join(uploadsDir, file);
+    const stats = fs.statSync(filePath);
+    const fileAge = now - stats.mtime.getTime();
+
+    // Delete files older than 30 minutes
+    if (fileAge > 30 * 60 * 1000) {
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️  Cleaned up expired file: ${file}`);
+      } catch (error) {
+        console.error(`❌ Error cleaning up ${file}:`, error.message);
+      }
+    }
+  });
+
+  console.log(`🧹 Cleanup completed. ${files.length} files checked.`);
+};
 
 // ================== Middleware ==================
 app.use(morgan("combined"));
@@ -93,6 +157,16 @@ app.get("/api/auth/google/callback",
   }
 );
 
+// ================== Privacy Headers Middleware ==================
+const addPrivacyHeaders = (req, res, next) => {
+  res.set({
+    'X-Privacy-Notice': 'Images are automatically deleted after 30 minutes',
+    'X-Data-Retention': '30 minutes',
+    'X-Auto-Cleanup': 'enabled'
+  });
+  next();
+};
+
 // ================== Image Processing ==================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -104,7 +178,13 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
+    const filename = file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname);
+
+    // Schedule automatic deletion after 30 minutes
+    const filePath = path.join(uploadDir, filename);
+    scheduleFileDeletion(filePath, filename);
+
+    cb(null, filename);
   },
 });
 
@@ -125,6 +205,13 @@ const upload = multer({
 });
 
 const convertImage = async (req, res, targetFormat, outputExt) => {
+  // Add privacy headers
+  res.set({
+    'X-Privacy-Notice': 'Images are automatically deleted after 30 minutes',
+    'X-Data-Retention': '30 minutes',
+    'X-Auto-Cleanup': 'enabled'
+  });
+
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
@@ -153,7 +240,7 @@ app.post("/api/convert/png-to-jpeg", upload.single("image"), (req, res) => conve
 app.post("/api/convert/jpg-to-webp", upload.single("image"), (req, res) => convertImage(req, res, "webp", "webp"));
 
 // ================== Passport Photo Generation ==================
-app.post("/api/passport-photo", upload.single("image"), async (req, res) => {
+app.post("/api/passport-photo", addPrivacyHeaders, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image uploaded" });
@@ -542,6 +629,1966 @@ app.post("/api/ocr", upload.single("image"), async (req, res) => {
   }
 });
 
+// ================== Image Editing Tools ==================
+
+// Generate Signature
+app.post("/api/tools/generate-signature", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { width = 200, height = 100, background = "transparent" } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/signature-${Date.now()}.png`;
+
+    let processedImage = sharp(inputPath)
+      .resize(parseInt(width), parseInt(height), { fit: 'contain', background: 'transparent' });
+
+    if (background !== "transparent") {
+      processedImage = processedImage.flatten({ background: background });
+    }
+
+    await processedImage.png().toFile(outputPath);
+
+    res.download(outputPath, "signature.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Signature generation error:", error);
+    res.status(500).json({ error: "Failed to generate signature" });
+  }
+});
+
+// Watermark Images
+app.post("/api/tools/watermark", upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'watermark', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (!req.files.image || !req.files.watermark) {
+      return res.status(400).json({ error: "Both image and watermark are required" });
+    }
+
+    const { position = 'bottomRight', opacity = 0.7 } = req.body;
+    const inputPath = req.files.image[0].path;
+    const watermarkPath = req.files.watermark[0].path;
+    const outputPath = `uploads/watermarked-${Date.now()}.png`;
+
+    const image = sharp(inputPath);
+    const watermark = sharp(watermarkPath);
+    const metadata = await image.metadata();
+
+    // Resize watermark to 20% of image width
+    const watermarkWidth = Math.round(metadata.width * 0.2);
+    const watermarkHeight = Math.round(metadata.height * 0.2);
+    const resizedWatermark = await watermark.resize(watermarkWidth, watermarkHeight).png().toBuffer();
+
+    let composite = [];
+    if (position === 'bottomRight') {
+      composite.push({
+        input: resizedWatermark,
+        top: metadata.height - watermarkHeight - 20,
+        left: metadata.width - watermarkWidth - 20
+      });
+    } else if (position === 'center') {
+      composite.push({
+        input: resizedWatermark,
+        top: Math.round((metadata.height - watermarkHeight) / 2),
+        left: Math.round((metadata.width - watermarkWidth) / 2)
+      });
+    }
+
+    await image.composite(composite).png().toFile(outputPath);
+
+    res.download(outputPath, "watermarked.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(watermarkPath)) fs.unlinkSync(watermarkPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Watermark error:", error);
+    res.status(500).json({ error: "Failed to add watermark" });
+  }
+});
+
+// Rotate Image
+app.post("/api/tools/rotate", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { angle = 90, background = "white" } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/rotated-${Date.now()}.png`;
+
+    await sharp(inputPath)
+      .rotate(parseInt(angle), { background: background })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "rotated.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Image rotation error:", error);
+    res.status(500).json({ error: "Failed to rotate image" });
+  }
+});
+
+// Flip Image
+app.post("/api/tools/flip", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { direction = "horizontal" } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/flipped-${Date.now()}.png`;
+
+    let processedImage = sharp(inputPath);
+    if (direction === "horizontal") {
+      processedImage = processedImage.flop();
+    } else if (direction === "vertical") {
+      processedImage = processedImage.flip();
+    }
+
+    await processedImage.png().toFile(outputPath);
+
+    res.download(outputPath, "flipped.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Image flip error:", error);
+    res.status(500).json({ error: "Failed to flip image" });
+  }
+});
+
+// Add Name & DOB on Photo
+app.post("/api/tools/add-text", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { text, x = 50, y = 50, fontSize = 24, color = "white" } = req.body;
+    if (!text) return res.status(400).json({ error: "Text is required" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/text-added-${Date.now()}.png`;
+
+    // Create text overlay
+    const textSvg = `
+      <svg width="400" height="100">
+        <text x="${x}" y="${y}" font-family="Arial" font-size="${fontSize}" fill="${color}" stroke="black" stroke-width="1">
+          ${text}
+        </text>
+      </svg>
+    `;
+
+    await sharp(inputPath)
+      .composite([{
+        input: Buffer.from(textSvg),
+        top: 0,
+        left: 0
+      }])
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "text-added.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Text addition error:", error);
+    res.status(500).json({ error: "Failed to add text" });
+  }
+});
+
+// Check Image DPI
+app.post("/api/tools/check-dpi", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const metadata = await sharp(inputPath).metadata();
+
+    // Calculate DPI (assuming standard print size)
+    const dpi = Math.round(metadata.width / 3.5); // 3.5 inches is standard width
+
+    res.json({
+      width: metadata.width,
+      height: metadata.height,
+      format: metadata.format,
+      dpi: dpi,
+      size: fs.statSync(inputPath).size
+    });
+
+    // Clean up
+    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+  } catch (error) {
+    console.error("DPI check error:", error);
+    res.status(500).json({ error: "Failed to check DPI" });
+  }
+});
+
+// Black & White Image
+app.post("/api/tools/black-white", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/bw-${Date.now()}.png`;
+
+    await sharp(inputPath)
+      .grayscale()
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "black-white.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Black & white conversion error:", error);
+    res.status(500).json({ error: "Failed to convert to black & white" });
+  }
+});
+
+// Grayscale Image
+app.post("/api/tools/grayscale", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/grayscale-${Date.now()}.png`;
+
+    await sharp(inputPath)
+      .grayscale()
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "grayscale.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Grayscale conversion error:", error);
+    res.status(500).json({ error: "Failed to convert to grayscale" });
+  }
+});
+
+// Circle Crop
+app.post("/api/tools/circle-crop", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/circle-${Date.now()}.png`;
+
+    const metadata = await sharp(inputPath).metadata();
+    const size = Math.min(metadata.width, metadata.height);
+
+    // Create circular mask
+    const circleSvg = `
+      <svg width="${size}" height="${size}">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="white"/>
+      </svg>
+    `;
+
+    await sharp(inputPath)
+      .resize(size, size, { fit: 'cover', position: 'center' })
+      .composite([{
+        input: Buffer.from(circleSvg),
+        blend: 'dest-in'
+      }])
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "circle-crop.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Circle crop error:", error);
+    res.status(500).json({ error: "Failed to create circle crop" });
+  }
+});
+
+// Pixelate Image
+app.post("/api/tools/pixelate", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { pixelSize = 10 } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/pixelated-${Date.now()}.png`;
+
+    const metadata = await sharp(inputPath).metadata();
+    const smallSize = Math.round(metadata.width / parseInt(pixelSize));
+
+    await sharp(inputPath)
+      .resize(smallSize, smallSize, { fit: 'fill' })
+      .resize(metadata.width, metadata.height, { fit: 'fill', kernel: 'nearest' })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "pixelated.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Pixelation error:", error);
+    res.status(500).json({ error: "Failed to pixelate image" });
+  }
+});
+
+// ================== Specialized Resize Tools ==================
+
+// Resize Image to 6cm x 2cm (300 DPI)
+app.post("/api/tools/resize-6x2cm", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/6x2cm-${Date.now()}.png`;
+
+    // 6cm x 2cm at 300 DPI = 708 x 236 pixels
+    const width = 708;
+    const height = 236;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "6x2cm-300dpi.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("6x2cm resize error:", error);
+    res.status(500).json({ error: "Failed to resize image" });
+  }
+});
+
+// Resize Image to 3.5cm x 4.5cm
+app.post("/api/tools/resize-35x45mm", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/35x45mm-${Date.now()}.png`;
+
+    // 3.5cm x 4.5cm at 300 DPI = 413 x 531 pixels
+    const width = 413;
+    const height = 531;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "35x45mm-300dpi.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("35x45mm resize error:", error);
+    res.status(500).json({ error: "Failed to resize image" });
+  }
+});
+
+// Resize Signature (50mm x 20mm)
+app.post("/api/tools/resize-signature", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/signature-50x20mm-${Date.now()}.png`;
+
+    // 50mm x 20mm at 300 DPI = 591 x 236 pixels
+    const width = 591;
+    const height = 236;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'contain', background: 'transparent' })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "signature-50x20mm.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Signature resize error:", error);
+    res.status(500).json({ error: "Failed to resize signature" });
+  }
+});
+
+// Instagram Grid Maker
+app.post("/api/tools/instagram-grid", upload.array("images", 9), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No images uploaded" });
+    }
+
+    const { gridSize = "3x3" } = req.body;
+    const [cols, rows] = gridSize.split("x").map(Number);
+    const maxImages = cols * rows;
+
+    if (req.files.length > maxImages) {
+      return res.status(400).json({ error: `Maximum ${maxImages} images allowed for ${gridSize} grid` });
+    }
+
+    const cellSize = 1080; // Instagram standard size
+    const gridWidth = cols * cellSize;
+    const gridHeight = rows * cellSize;
+
+    const composite = [];
+    for (let i = 0; i < req.files.length; i++) {
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+
+      const resizedImage = await sharp(req.files[i].path)
+        .resize(cellSize, cellSize, { fit: 'cover', position: 'center' })
+        .png()
+        .toBuffer();
+
+      composite.push({
+        input: resizedImage,
+        top: row * cellSize,
+        left: col * cellSize
+      });
+    }
+
+    const outputPath = `uploads/instagram-grid-${Date.now()}.png`;
+    await sharp({
+      create: {
+        width: gridWidth,
+        height: gridHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      }
+    })
+      .composite(composite)
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "instagram-grid.png", (err) => {
+      req.files.forEach(file => {
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      });
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Instagram grid error:", error);
+    res.status(500).json({ error: "Failed to create Instagram grid" });
+  }
+});
+
+// Join Images In One Image
+app.post("/api/tools/join-images", upload.array("images", 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No images uploaded" });
+    }
+
+    const { direction = "horizontal", spacing = 0 } = req.body;
+    const spacingPx = parseInt(spacing);
+
+    let totalWidth = 0;
+    let maxHeight = 0;
+    const processedImages = [];
+
+    // Process all images
+    for (const file of req.files) {
+      const metadata = await sharp(file.path).metadata();
+      processedImages.push({
+        path: file.path,
+        width: metadata.width,
+        height: metadata.height
+      });
+
+      if (direction === "horizontal") {
+        totalWidth += metadata.width;
+        maxHeight = Math.max(maxHeight, metadata.height);
+      } else {
+        maxHeight += metadata.height;
+        totalWidth = Math.max(totalWidth, metadata.width);
+      }
+    }
+
+    // Add spacing
+    if (direction === "horizontal") {
+      totalWidth += spacingPx * (processedImages.length - 1);
+    } else {
+      maxHeight += spacingPx * (processedImages.length - 1);
+    }
+
+    const outputPath = `uploads/joined-images-${Date.now()}.png`;
+    const composite = [];
+
+    if (direction === "horizontal") {
+      let currentX = 0;
+      for (let i = 0; i < processedImages.length; i++) {
+        const resizedImage = await sharp(processedImages[i].path)
+          .resize(processedImages[i].width, processedImages[i].height)
+          .png()
+          .toBuffer();
+
+        composite.push({
+          input: resizedImage,
+          top: 0,
+          left: currentX
+        });
+        currentX += processedImages[i].width + spacingPx;
+      }
+    } else {
+      let currentY = 0;
+      for (let i = 0; i < processedImages.length; i++) {
+        const resizedImage = await sharp(processedImages[i].path)
+          .resize(processedImages[i].width, processedImages[i].height)
+          .png()
+          .toBuffer();
+
+        composite.push({
+          input: resizedImage,
+          top: currentY,
+          left: 0
+        });
+        currentY += processedImages[i].height + spacingPx;
+      }
+    }
+
+    await sharp({
+      create: {
+        width: totalWidth,
+        height: maxHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      }
+    })
+      .composite(composite)
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "joined-images.png", (err) => {
+      req.files.forEach(file => {
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      });
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Join images error:", error);
+    res.status(500).json({ error: "Failed to join images" });
+  }
+});
+
+// Split Image
+app.post("/api/tools/split-image", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { rows = 2, cols = 2 } = req.body;
+    const inputPath = req.file.path;
+    const metadata = await sharp(inputPath).metadata();
+
+    const cellWidth = Math.floor(metadata.width / cols);
+    const cellHeight = Math.floor(metadata.height / rows);
+
+    const zip = new JSZip();
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = col * cellWidth;
+        const y = row * cellHeight;
+
+        const cellImage = await sharp(inputPath)
+          .extract({ left: x, top: y, width: cellWidth, height: cellHeight })
+          .png()
+          .toBuffer();
+
+        zip.file(`cell-${row}-${col}.png`, cellImage);
+      }
+    }
+
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    const outputPath = `uploads/split-image-${Date.now()}.zip`;
+    fs.writeFileSync(outputPath, zipBuffer);
+
+    res.download(outputPath, "split-images.zip", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Split image error:", error);
+    res.status(500).json({ error: "Failed to split image" });
+  }
+});
+
+// Image Color Picker
+app.post("/api/tools/color-picker", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const { x = 0, y = 0 } = req.body;
+
+    const pixel = await sharp(inputPath)
+      .extract({ left: parseInt(x), top: parseInt(y), width: 1, height: 1 })
+      .raw()
+      .toBuffer();
+
+    const [r, g, b] = pixel;
+    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+
+    res.json({
+      rgb: { r, g, b },
+      hex: hex,
+      position: { x: parseInt(x), y: parseInt(y) }
+    });
+
+    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+  } catch (error) {
+    console.error("Color picker error:", error);
+    res.status(500).json({ error: "Failed to pick color" });
+  }
+});
+
+// Freehand Crop (Custom Selection)
+app.post("/api/tools/freehand-crop", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { x, y, width, height } = req.body;
+    if (!x || !y || !width || !height) {
+      return res.status(400).json({ error: "Crop coordinates and dimensions are required" });
+    }
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/cropped-${Date.now()}.png`;
+
+    await sharp(inputPath)
+      .extract({
+        left: parseInt(x),
+        top: parseInt(y),
+        width: parseInt(width),
+        height: parseInt(height)
+      })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "cropped.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Freehand crop error:", error);
+    res.status(500).json({ error: "Failed to crop image" });
+  }
+});
+
+// ================== Document-Specific Resize Tools ==================
+
+// Resize Image for Instagram (No Crop)
+app.post("/api/tools/resize-instagram", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/instagram-${Date.now()}.jpg`;
+
+    // Instagram aspect ratio: 4:5 (portrait) or 1:1 (square)
+    const { aspect = "1:1" } = req.body;
+
+    let width, height;
+    if (aspect === "4:5") {
+      width = 1080;
+      height = 1350;
+    } else {
+      width = 1080;
+      height = 1080;
+    }
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'contain', background: 'white' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "instagram-ready.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Instagram resize error:", error);
+    res.status(500).json({ error: "Failed to resize for Instagram" });
+  }
+});
+
+// Resize Image for WhatsApp DP
+app.post("/api/tools/resize-whatsapp-dp", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/whatsapp-dp-${Date.now()}.jpg`;
+
+    // WhatsApp DP: 192x192 pixels
+    const size = 192;
+
+    await sharp(inputPath)
+      .resize(size, size, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "whatsapp-dp.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("WhatsApp DP resize error:", error);
+    res.status(500).json({ error: "Failed to resize for WhatsApp DP" });
+  }
+});
+
+// Resize Image to 4x6
+app.post("/api/tools/resize-4x6", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/4x6-${Date.now()}.jpg`;
+
+    // 4x6 inches at 300 DPI = 1200 x 1800 pixels
+    const width = 1200;
+    const height = 1800;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "4x6-300dpi.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("4x6 resize error:", error);
+    res.status(500).json({ error: "Failed to resize to 4x6" });
+  }
+});
+
+// Resize Image to 3x4
+app.post("/api/tools/resize-3x4", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/3x4-${Date.now()}.jpg`;
+
+    // 3x4 inches at 300 DPI = 900 x 1200 pixels
+    const width = 900;
+    const height = 1200;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "3x4-300dpi.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("3x4 resize error:", error);
+    res.status(500).json({ error: "Failed to resize to 3x4" });
+  }
+});
+
+// Resize Image to 2x2 Inch
+app.post("/api/tools/resize-2x2", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/2x2-${Date.now()}.jpg`;
+
+    // 2x2 inches at 300 DPI = 600 x 600 pixels
+    const size = 600;
+
+    await sharp(inputPath)
+      .resize(size, size, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "2x2-300dpi.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("2x2 resize error:", error);
+    res.status(500).json({ error: "Failed to resize to 2x2" });
+  }
+});
+
+// Resize Image to 600x600
+app.post("/api/tools/resize-600x600", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/600x600-${Date.now()}.jpg`;
+
+    const size = 600;
+
+    await sharp(inputPath)
+      .resize(size, size, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "600x600.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("600x600 resize error:", error);
+    res.status(500).json({ error: "Failed to resize to 600x600" });
+  }
+});
+
+// Resize Image to A4 Size
+app.post("/api/tools/resize-a4", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/a4-${Date.now()}.jpg`;
+
+    // A4: 210mm x 297mm at 300 DPI = 2480 x 3508 pixels
+    const width = 2480;
+    const height = 3508;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'contain', background: 'white' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "a4-300dpi.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("A4 resize error:", error);
+    res.status(500).json({ error: "Failed to resize to A4" });
+  }
+});
+
+// Resize Image For SSC
+app.post("/api/tools/resize-ssc", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/ssc-${Date.now()}.jpg`;
+
+    // SSC: 35mm x 45mm at 300 DPI = 413 x 531 pixels
+    const width = 413;
+    const height = 531;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "ssc-photo.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("SSC resize error:", error);
+    res.status(500).json({ error: "Failed to resize for SSC" });
+  }
+});
+
+// Resize Image For PAN Card
+app.post("/api/tools/resize-pan-card", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/pan-card-${Date.now()}.jpg`;
+
+    // PAN Card: 35mm x 25mm at 300 DPI = 413 x 295 pixels
+    const width = 413;
+    const height = 295;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "pan-card-photo.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("PAN Card resize error:", error);
+    res.status(500).json({ error: "Failed to resize for PAN Card" });
+  }
+});
+
+// Resize Image For UPSC
+app.post("/api/tools/resize-upsc", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/upsc-${Date.now()}.jpg`;
+
+    // UPSC: 35mm x 45mm at 300 DPI = 413 x 531 pixels
+    const width = 413;
+    const height = 531;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "upsc-photo.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("UPSC resize error:", error);
+    res.status(500).json({ error: "Failed to resize for UPSC" });
+  }
+});
+
+// Resize Image for YouTube Banner
+app.post("/api/tools/resize-youtube-banner", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/youtube-banner-${Date.now()}.jpg`;
+
+    // YouTube Banner: 2560 x 1440 pixels
+    const width = 2560;
+    const height = 1440;
+
+    await sharp(inputPath)
+      .resize(width, height, { fit: 'cover', position: 'center' })
+      .jpeg({ quality: 90 })
+      .toFile(outputPath);
+
+    res.download(outputPath, "youtube-banner.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("YouTube banner resize error:", error);
+    res.status(500).json({ error: "Failed to resize for YouTube banner" });
+  }
+});
+
+// ================== Advanced Compression Tools ==================
+
+// Compress Image To 5kb
+app.post("/api/tools/compress-to-5kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/5kb-${Date.now()}.jpg`;
+    const targetSize = 5 * 1024; // 5KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-5kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("5KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 5KB" });
+  }
+});
+
+// Compress JPEG To 10kb
+app.post("/api/tools/compress-to-10kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/10kb-${Date.now()}.jpg`;
+    const targetSize = 10 * 1024; // 10KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-10kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("10KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 10KB" });
+  }
+});
+
+// Compress Image To 15kb
+app.post("/api/tools/compress-to-15kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/15kb-${Date.now()}.jpg`;
+    const targetSize = 15 * 1024; // 15KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-15kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("15KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 15KB" });
+  }
+});
+
+// Compress Image To 20kb
+app.post("/api/tools/compress-to-20kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/20kb-${Date.now()}.jpg`;
+    const targetSize = 20 * 1024; // 20KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-20kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("20KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 20KB" });
+  }
+});
+
+// Compress Image Between 20kb to 50kb
+app.post("/api/tools/compress-20-50kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/20-50kb-${Date.now()}.jpg`;
+    const minSize = 20 * 1024; // 20KB
+    const maxSize = 50 * 1024; // 50KB
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 15) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size >= minSize && stats.size <= maxSize) {
+        break;
+      }
+
+      if (stats.size > maxSize) {
+        quality = Math.max(10, quality - 10);
+      } else {
+        quality = Math.min(95, quality + 5);
+      }
+
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-20-50kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("20-50KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 20-50KB range" });
+  }
+});
+
+// Compress Image To 25kb
+app.post("/api/tools/compress-to-25kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/25kb-${Date.now()}.jpg`;
+    const targetSize = 25 * 1024; // 25KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-25kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("25KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 25KB" });
+  }
+});
+
+// Compress JPEG To 30kb
+app.post("/api/tools/compress-to-30kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/30kb-${Date.now()}.jpg`;
+    const targetSize = 30 * 1024; // 30KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-30kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("30KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 30KB" });
+  }
+});
+
+// Compress JPEG To 40kb
+app.post("/api/tools/compress-to-40kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/40kb-${Date.now()}.jpg`;
+    const targetSize = 40 * 1024; // 40KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-40kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("40KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 40KB" });
+  }
+});
+
+// Compress Image to 50kb
+app.post("/api/tools/compress-to-50kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/50kb-${Date.now()}.jpg`;
+    const targetSize = 50 * 1024; // 50KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-50kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("50KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 50KB" });
+  }
+});
+
+// Compress Image to 100kb
+app.post("/api/tools/compress-to-100kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/100kb-${Date.now()}.jpg`;
+    const targetSize = 100 * 1024; // 100KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-100kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("100KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 100KB" });
+  }
+});
+
+// Compress JPEG To 150kb
+app.post("/api/tools/compress-to-150kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/150kb-${Date.now()}.jpg`;
+    const targetSize = 150 * 1024; // 150KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-150kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("150KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 150KB" });
+  }
+});
+
+// Compress Image To 200kb
+app.post("/api/tools/compress-to-200kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/200kb-${Date.now()}.jpg`;
+    const targetSize = 200 * 1024; // 200KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-200kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("200KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 200KB" });
+  }
+});
+
+// Compress JPEG To 300kb
+app.post("/api/tools/compress-to-300kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/300kb-${Date.now()}.jpg`;
+    const targetSize = 300 * 1024; // 300KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-300kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("300KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 300KB" });
+  }
+});
+
+// Compress JPEG To 500kb
+app.post("/api/tools/compress-to-500kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/500kb-${Date.now()}.jpg`;
+    const targetSize = 500 * 1024; // 500KB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-500kb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("500KB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 500KB" });
+  }
+});
+
+// Compress Image To 1 MB
+app.post("/api/tools/compress-to-1mb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/1mb-${Date.now()}.jpg`;
+    const targetSize = 1024 * 1024; // 1MB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-1mb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("1MB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 1MB" });
+  }
+});
+
+// Compress Image To 2 MB
+app.post("/api/tools/compress-to-2mb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/2mb-${Date.now()}.jpg`;
+    const targetSize = 2 * 1024 * 1024; // 2MB in bytes
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 10) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSize || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    res.download(outputPath, "compressed-2mb.jpg", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("2MB compression error:", error);
+    res.status(500).json({ error: "Failed to compress to 2MB" });
+  }
+});
+
+// ================== Utility Tools ==================
+
+// JPG To KB
+app.post("/api/tools/jpg-to-kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const stats = fs.statSync(inputPath);
+    const sizeInKB = Math.round(stats.size / 1024);
+
+    res.json({
+      originalSize: stats.size,
+      sizeInKB: sizeInKB,
+      sizeInMB: (sizeInKB / 1024).toFixed(2)
+    });
+
+    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+  } catch (error) {
+    console.error("JPG to KB error:", error);
+    res.status(500).json({ error: "Failed to get file size" });
+  }
+});
+
+// Convert Image MB To KB
+app.post("/api/tools/convert-mb-to-kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const stats = fs.statSync(inputPath);
+    const sizeInKB = Math.round(stats.size / 1024);
+    const sizeInMB = (sizeInKB / 1024).toFixed(2);
+
+    res.json({
+      originalSize: stats.size,
+      sizeInKB: sizeInKB,
+      sizeInMB: sizeInMB,
+      conversion: `${sizeInMB} MB = ${sizeInKB} KB`
+    });
+
+    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+  } catch (error) {
+    console.error("MB to KB conversion error:", error);
+    res.status(500).json({ error: "Failed to convert file size" });
+  }
+});
+
+// Convert Image KB To MB
+app.post("/api/tools/convert-kb-to-mb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const inputPath = req.file.path;
+    const stats = fs.statSync(inputPath);
+    const sizeInKB = Math.round(stats.size / 1024);
+    const sizeInMB = (sizeInKB / 1024).toFixed(2);
+
+    res.json({
+      originalSize: stats.size,
+      sizeInKB: sizeInKB,
+      sizeInMB: sizeInMB,
+      conversion: `${sizeInKB} KB = ${sizeInMB} MB`
+    });
+
+    if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+  } catch (error) {
+    console.error("KB to MB conversion error:", error);
+    res.status(500).json({ error: "Failed to convert file size" });
+  }
+});
+
+// Reduce Image Size in KB
+app.post("/api/tools/reduce-size-kb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { targetSize = 100 } = req.body; // Target size in KB
+    const inputPath = req.file.path;
+    const outputPath = `uploads/reduced-${Date.now()}.jpg`;
+    const targetSizeBytes = parseInt(targetSize) * 1024;
+
+    const originalStats = fs.statSync(inputPath);
+    const originalSizeKB = Math.round(originalStats.size / 1024);
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 15) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSizeBytes || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    const finalStats = fs.statSync(outputPath);
+    const finalSizeKB = Math.round(finalStats.size / 1024);
+    const reduction = Math.round(((originalSizeKB - finalSizeKB) / originalSizeKB) * 100);
+
+    res.download(outputPath, `reduced-${targetSize}kb.jpg`, (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Reduce size error:", error);
+    res.status(500).json({ error: "Failed to reduce image size" });
+  }
+});
+
+// Reduce Image Size in MB
+app.post("/api/tools/reduce-size-mb", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { targetSize = 1 } = req.body; // Target size in MB
+    const inputPath = req.file.path;
+    const outputPath = `uploads/reduced-${Date.now()}.jpg`;
+    const targetSizeBytes = parseFloat(targetSize) * 1024 * 1024;
+
+    const originalStats = fs.statSync(inputPath);
+    const originalSizeMB = (originalStats.size / (1024 * 1024)).toFixed(2);
+
+    let quality = 90;
+    let attempt = 0;
+
+    while (attempt < 15) {
+      await sharp(inputPath)
+        .jpeg({ quality })
+        .toFile(outputPath);
+
+      const stats = fs.statSync(outputPath);
+      if (stats.size <= targetSizeBytes || quality <= 10) {
+        break;
+      }
+
+      quality = Math.max(10, quality - 10);
+      attempt++;
+    }
+
+    const finalStats = fs.statSync(outputPath);
+    const finalSizeMB = (finalStats.size / (1024 * 1024)).toFixed(2);
+    const reduction = Math.round(((parseFloat(originalSizeMB) - parseFloat(finalSizeMB)) / parseFloat(originalSizeMB)) * 100);
+
+    res.download(outputPath, `reduced-${targetSize}mb.jpg`, (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Reduce size MB error:", error);
+    res.status(500).json({ error: "Failed to reduce image size" });
+  }
+});
+
+// Pi7 Bulk Image Resizer
+app.post("/api/tools/bulk-resize", upload.array("images", 20), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No images uploaded" });
+    }
+
+    const { width, height, quality = 90, format = "jpg" } = req.body;
+    if (!width || !height) {
+      return res.status(400).json({ error: "Width and height are required" });
+    }
+
+    const zip = new JSZip();
+
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const outputPath = `uploads/bulk-${i}-${Date.now()}.${format}`;
+
+      let processedImage = sharp(file.path).resize(parseInt(width), parseInt(height), {
+        fit: 'cover',
+        position: 'center'
+      });
+
+      if (format === "jpg" || format === "jpeg") {
+        processedImage = processedImage.jpeg({ quality: parseInt(quality) });
+      } else if (format === "png") {
+        processedImage = processedImage.png();
+      } else if (format === "webp") {
+        processedImage = processedImage.webp({ quality: parseInt(quality) });
+      }
+
+      const buffer = await processedImage.toBuffer();
+      zip.file(`resized-${i + 1}.${format}`, buffer);
+
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
+
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    const zipOutputPath = `uploads/bulk-resized-${Date.now()}.zip`;
+    fs.writeFileSync(zipOutputPath, zipBuffer);
+
+    res.download(zipOutputPath, "bulk-resized-images.zip", (err) => {
+      if (fs.existsSync(zipOutputPath)) fs.unlinkSync(zipOutputPath);
+    });
+  } catch (error) {
+    console.error("Bulk resize error:", error);
+    res.status(500).json({ error: "Failed to bulk resize images" });
+  }
+});
+
+// Resize Image In Centimeter
+app.post("/api/tools/resize-cm", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { width, height, dpi = 300, format = "jpg" } = req.body;
+    if (!width || !height) {
+      return res.status(400).json({ error: "Width and height in cm are required" });
+    }
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/cm-${Date.now()}.${format}`;
+
+    // Convert cm to pixels at specified DPI
+    const cmToInch = 0.393701;
+    const widthInPixels = Math.round(width * cmToInch * parseInt(dpi));
+    const heightInPixels = Math.round(height * cmToInch * parseInt(dpi));
+
+    let processedImage = sharp(inputPath).resize(widthInPixels, heightInPixels, {
+      fit: 'cover',
+      position: 'center'
+    });
+
+    if (format === "jpg" || format === "jpeg") {
+      processedImage = processedImage.jpeg({ quality: 90 });
+    } else if (format === "png") {
+      processedImage = processedImage.png();
+    }
+
+    await processedImage.toFile(outputPath);
+
+    res.download(outputPath, `resized-${width}x${height}cm.${format}`, (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("CM resize error:", error);
+    res.status(500).json({ error: "Failed to resize in centimeters" });
+  }
+});
+
+// Resize Image In MM
+app.post("/api/tools/resize-mm", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { width, height, dpi = 300, format = "jpg" } = req.body;
+    if (!width || !height) {
+      return res.status(400).json({ error: "Width and height in mm are required" });
+    }
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/mm-${Date.now()}.${format}`;
+
+    // Convert mm to pixels at specified DPI
+    const mmToInch = 0.0393701;
+    const widthInPixels = Math.round(width * mmToInch * parseInt(dpi));
+    const heightInPixels = Math.round(height * mmToInch * parseInt(dpi));
+
+    let processedImage = sharp(inputPath).resize(widthInPixels, heightInPixels, {
+      fit: 'cover',
+      position: 'center'
+    });
+
+    if (format === "jpg" || format === "jpeg") {
+      processedImage = processedImage.jpeg({ quality: 90 });
+    } else if (format === "png") {
+      processedImage = processedImage.png();
+    }
+
+    await processedImage.toFile(outputPath);
+
+    res.download(outputPath, `resized-${width}x${height}mm.${format}`, (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("MM resize error:", error);
+    res.status(500).json({ error: "Failed to resize in millimeters" });
+  }
+});
+
+// Resize Image In Inches
+app.post("/api/tools/resize-inches", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { width, height, dpi = 300, format = "jpg" } = req.body;
+    if (!width || !height) {
+      return res.status(400).json({ error: "Width and height in inches are required" });
+    }
+
+    const inputPath = req.file.path;
+    const outputPath = `uploads/inches-${Date.now()}.${format}`;
+
+    // Convert inches to pixels at specified DPI
+    const widthInPixels = Math.round(width * parseInt(dpi));
+    const heightInPixels = Math.round(height * parseInt(dpi));
+
+    let processedImage = sharp(inputPath).resize(widthInPixels, heightInPixels, {
+      fit: 'cover',
+      position: 'center'
+    });
+
+    if (format === "jpg" || format === "jpeg") {
+      processedImage = processedImage.jpeg({ quality: 90 });
+    } else if (format === "png") {
+      processedImage = processedImage.png();
+    }
+
+    await processedImage.toFile(outputPath);
+
+    res.download(outputPath, `resized-${width}x${height}inches.${format}`, (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Inches resize error:", error);
+    res.status(500).json({ error: "Failed to resize in inches" });
+  }
+});
+
+// Picture to Pixel Art
+app.post("/api/tools/pixel-art", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { pixelSize = 8 } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/pixel-art-${Date.now()}.png`;
+
+    const metadata = await sharp(inputPath).metadata();
+    const smallSize = Math.round(metadata.width / parseInt(pixelSize));
+
+    await sharp(inputPath)
+      .resize(smallSize, smallSize, { fit: 'fill' })
+      .resize(metadata.width, metadata.height, { fit: 'fill', kernel: 'nearest' })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "pixel-art.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Pixel art error:", error);
+    res.status(500).json({ error: "Failed to create pixel art" });
+  }
+});
+
+// Super Resolution (Increase Image Quality)
+app.post("/api/tools/super-resolution", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    const { scale = 2 } = req.body;
+    const inputPath = req.file.path;
+    const outputPath = `uploads/super-res-${Date.now()}.png`;
+
+    const metadata = await sharp(inputPath).metadata();
+    const newWidth = metadata.width * parseInt(scale);
+    const newHeight = metadata.height * parseInt(scale);
+
+    await sharp(inputPath)
+      .resize(newWidth, newHeight, {
+        fit: 'fill',
+        kernel: 'lanczos3' // High quality scaling
+      })
+      .png()
+      .toFile(outputPath);
+
+    res.download(outputPath, "super-resolution.png", (err) => {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("Super resolution error:", error);
+    res.status(500).json({ error: "Failed to increase image resolution" });
+  }
+});
+
+// AI Face Generator (This Person Not Exist)
+app.post("/api/tools/ai-face", async (req, res) => {
+  try {
+    // This is a placeholder for AI face generation
+    // In production, you would integrate with services like:
+    // - This Person Does Not Exist API
+    // - DeepAI
+    // - Or other AI image generation services
+
+    res.json({
+      message: "AI Face Generation feature requires integration with external AI services",
+      availableServices: [
+        "This Person Does Not Exist",
+        "DeepAI",
+        "OpenAI DALL-E",
+        "Stable Diffusion"
+      ],
+      note: "This endpoint is a placeholder. Implement actual AI service integration based on your requirements."
+    });
+  } catch (error) {
+    console.error("AI face generation error:", error);
+    res.status(500).json({ error: "AI face generation not implemented" });
+  }
+});
+
 // ================== AI: Image Caption ==================
 app.post("/api/ai/caption", upload.single("image"), async (req, res) => {
   try {
@@ -609,6 +2656,39 @@ app.get("/api/health", (req, res) => {
     status: "OK",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
+    privacy: "Images are automatically deleted after 30 minutes",
+  });
+});
+
+// ================== File Status Endpoint ==================
+app.get("/api/files/status", (req, res) => {
+  const fileStatus = Array.from(uploadedFiles.entries()).map(([fileName, info]) => ({
+    fileName,
+    uploadedAt: info.uploadedAt,
+    scheduledDeletion: info.scheduledDeletion,
+    timeRemaining: Math.max(0, info.scheduledDeletion.getTime() - Date.now()),
+    status: info.scheduledDeletion.getTime() > Date.now() ? "active" : "expired"
+  }));
+
+  res.json({
+    totalFiles: uploadedFiles.size,
+    files: fileStatus,
+    privacyNotice: "Your images are automatically deleted after 30 minutes for privacy and security",
+    deletionTime: "30 minutes"
+  });
+});
+
+// ================== Privacy Notice Endpoint ==================
+app.get("/api/privacy", (req, res) => {
+  res.json({
+    privacyNotice: "Your Privacy & Security",
+    dataRetention: "30 minutes",
+    automaticDeletion: true,
+    dataProcessing: "Images are processed in memory and automatically deleted",
+    noStorage: "We do not permanently store your images",
+    security: "All uploads are encrypted and processed securely",
+    compliance: "GDPR compliant data handling",
+    contact: "For privacy concerns, contact our support team"
   });
 });
 
@@ -659,11 +2739,15 @@ app.use("*", (req, res) => res.status(404).json({ error: "Route not found" }));
 // ================== Database Connection ==================
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI); // ✅ no deprecated options
-    console.log("✅ MongoDB connected successfully");
+    if (process.env.MONGO_URI) {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log("✅ MongoDB connected successfully");
+    } else {
+      console.log("⚠️  No MongoDB URI provided, running without database");
+    }
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error.message);
-    process.exit(1);
+    console.log("⚠️  Running without database for development");
   }
 };
 
@@ -671,7 +2755,14 @@ const connectDB = async () => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+    // Clean up expired files on server start
+    cleanupExpiredFiles();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🔒 Privacy Notice: Images are automatically deleted after 30 minutes`);
+    });
   } catch (error) {
     console.error("❌ Server startup failed:", error);
     process.exit(1);

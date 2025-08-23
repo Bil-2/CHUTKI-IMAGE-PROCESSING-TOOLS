@@ -1,7 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 
 dotenv.config();
@@ -18,22 +18,35 @@ passport.use(
         console.log("Google OAuth profile received:", {
           id: profile.id,
           displayName: profile.displayName,
-          email: profile.emails?.[0]?.value
+          email: profile.emails?.[0]?.value,
         });
 
-        // Use the static method to find or create user
-        const user = await User.findOrCreateGoogleUser(profile);
+        // Check if MongoDB is available
+        if (mongoose.connection.readyState === 1) {
+          const user = await User.findOrCreateGoogleUser(profile);
 
-        console.log("User found/created:", {
-          id: user._id,
-          email: user.email,
-          name: user.name
-        });
+          console.log("User found/created:", {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+          });
 
-        // Update last login
-        await user.updateLastLogin();
+          // Update last login
+          await user.updateLastLogin();
 
-        return done(null, user);
+          // Return user here
+          return done(null, user);
+        } else {
+          // Fallback for development without MongoDB
+          const mockUser = {
+            id: profile.id,
+            email: profile.emails?.[0]?.value || "no-email@example.com",
+            name: profile.displayName || "Unknown User",
+            googleId: profile.id,
+          };
+          console.log("Using mock user for development:", mockUser);
+          return done(null, mockUser);
+        }
       } catch (error) {
         console.error("Google OAuth error:", error);
         return done(error, null);
@@ -43,15 +56,24 @@ passport.use(
 );
 
 passport.serializeUser((user, done) => {
-  console.log("Serializing user:", user.id);
-  done(null, user.id);
+  console.log("Serializing user:", user.id || user._id);
+  done(null, user.id || user._id);
 });
 
 passport.deserializeUser(async (id, done) => {
   try {
     console.log("Deserializing user:", id);
-    const user = await User.findById(id).select("-password");
-    done(null, user);
+    if (mongoose.connection.readyState === 1) {
+      const user = await User.findById(id).select("-password");
+      done(null, user);
+    } else {
+      const mockUser = {
+        id: id,
+        email: "dev-user@example.com",
+        name: "Development User",
+      };
+      done(null, mockUser);
+    }
   } catch (error) {
     console.error("Deserialize error:", error);
     done(error, null);

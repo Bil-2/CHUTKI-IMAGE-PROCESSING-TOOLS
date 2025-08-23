@@ -6,9 +6,10 @@ import Footer from "./components/Footer";
 import ImageConversionTools from "./components/ImageConversionTools";
 import ToolPage from "./components/ToolPage";
 import PassportPhotoMaker from "./components/PassportPhotoMaker";
+import GenericToolPage from "./components/GenericToolPage";
 import OAuthSuccess from "./OAuthSuccess";
 import Login from "./Login";
-import { tools } from "./toolsConfig";
+
 
 function App() {
   const navigate = useNavigate();
@@ -185,6 +186,11 @@ function App() {
 
         {/* Image conversion tools */}
         <Route path="/tools" element={<ImageConversionTools />} />
+
+        {/* Dynamic tool routes */}
+        <Route path="/tools/:toolName" element={<GenericToolPage />} />
+
+        {/* Legacy specific routes (can be removed later) */}
         <Route
           path="/tools/heic-to-jpg"
           element={<ToolPage title="HEIC to JPG" apiEndpoint="/api/convert/heic-to-jpg" />}
