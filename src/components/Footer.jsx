@@ -4,7 +4,6 @@ function Footer() {
   return (
     <footer className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 text-gray-800 dark:text-gray-200 pt-8 mt-16 border-t border-purple-300/40 dark:border-purple-500/40">
       <div className="max-w-7xl mx-auto px-6 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
-
         {/* Logo & Privacy */}
         <div className="sm:col-span-2">
           <div className="flex items-center gap-3 mb-3">
@@ -33,12 +32,11 @@ function Footer() {
 
         {/* Tools Section */}
         <div className="sm:col-span-2 md:col-span-2 flex flex-row gap-8">
-
           {/* GIF Tools */}
           <div className="flex-1">
             <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">GIF Tools</h4>
             <ul className="space-y-2 text-sm">
-              {["GIF Maker", "GIF Compressor", "Add Text to GIFs", ].map((tool, i) => (
+              {["GIF Maker", "GIF Compressor", "Add Text to GIFs"].map((tool, i) => (
                 <li
                   key={i}
                   className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
@@ -63,7 +61,6 @@ function Footer() {
               ))}
             </ul>
           </div>
-
         </div>
       </div>
 
@@ -84,46 +81,46 @@ function Footer() {
           </a>
 
           {/* Facebook */}
-          <a
-            href="https://facebook.com/YourPageName"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:scale-110 transition-transform"
-            aria-label="Facebook"
-          >
-            <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M22.675 0h-21.35C.6 0 0 .6 0 1.325V22.68c0 .725.6 1.325 1.325 1.325h11.49v-9.845H9.847V10.41h2.968V8.077c0-2.935 1.793-4.532 4.41-4.532 1.254 0 2.33.093 2.642.135v3.06h-1.812c-1.423 0-1.698.677-1.698 1.67v2.184h3.396l-.443 3.75h-2.953V24h5.787C23.4 24 24 23.4 24 22.675V1.325C24 .6 23.4 0 22.675 0z" />
-            </svg>
-          </a>
+         <a
+  href="https://linkedin.com/in/your-profile"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="hover:scale-110 transition-transform"
+  aria-label="LinkedIn"
+>
+  <svg className="w-6 h-6 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.026-3.037-1.852-3.037-1.853 0-2.137 1.445-2.137 2.939v5.667H9.351V9h3.414v1.561h.049c.476-.9 1.637-1.852 3.369-1.852 3.601 0 4.267 2.371 4.267 5.455v6.288zM5.337 7.433a2.065 2.065 0 1 1 0-4.13 2.065 2.065 0 0 1 0 4.13zM6.963 20.452H3.713V9h3.25v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.225.792 24 1.771 24h20.451C23.2 24 24 23.225 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/>
+  </svg>
+</a>
 
-          {/* Instagram */}
+
+          {/* X (Twitter) */}
           <a
-            href="https://instagram.com/YourUsername"
+            href="https://twitter.com/your_username"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:scale-110 transition-transform"
-            aria-label="Instagram"
+            aria-label="X"
           >
-            <svg className="w-6 h-6 text-pink-500" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M7.5 2h9A5.5 5.5 0 0 1 22 7.5v9a5.5 5.5 0 0 1-5.5 5.5h-9A5.5 5.5 0 0 1 2 16.5v-9A5.5 5.5 0 0 1 7.5 2zm0 1.5A4 4 0 0 0 3.5 7.5v9A4 4 0 0 0 7.5 20.5h9a4 4 0 0 0 4-4v-9a4 4 0 0 0-4-4h-9zm4.5 4.25a5.25 5.25 0 1 1 0 10.5 5.25 5.25 0 0 1 0-10.5zm0 1.5a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5zm5.75-.875a.875.875 0 1 1-1.75 0 .875.875 0 0 1 1.75 0z" />
+            <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.5 2h3l-7.5 9.4L21 22h-5.8l-4.6-6.4L6 22H3l8.3-10.4L3 2h5.8l4 5.6L17.5 2z" />
             </svg>
           </a>
         </div>
 
         {/* Footer Text */}
-       <p className="text-xs text-gray-600 dark:text-gray-400">
-  © 2025 Made with <span className="text-red-500">♥</span> by{" "}
-  <a
-    href="https://github.com/Bil-2"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-purple-900 dark:text-purple-300 font-semibold hover:underline hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-  >
-    Bil‑2
-  </a>{" "}
-  All rights reserved.
-</p>
-
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          © 2025 Made with <span className="text-red-500">♥</span> by{" "}
+          <a
+            href="https://github.com/Bil-2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-900 dark:text-purple-300 font-semibold hover:underline hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          >
+            Bil-2
+          </a>{" "}
+          All rights reserved.
+        </p>
       </div>
     </footer>
   );
