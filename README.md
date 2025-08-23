@@ -98,7 +98,7 @@
 
 ### **Clone the Repository**
 ```bash
-git clone https://github.com/yourusername/chutki-image-tools.git
+git clone https://github.com/Bil-2/chutki-image-tools.git
 cd chutki-image-tools
 ```
 
@@ -144,7 +144,7 @@ npm run dev
 ### **Option 1: Local Development**
 ```bash
 # Clone and setup
-git clone https://github.com/yourusername/chutki-image-tools.git
+git clone https://github.com/Bil-2/chutki-image-tools.git
 cd chutki-image-tools
 npm install
 cd backend && npm install && cd ..
@@ -327,7 +327,7 @@ We welcome contributions! Please follow these steps:
 
 ### **1. Fork the Repository**
 ```bash
-git clone https://github.com/yourusername/chutki-image-tools.git
+git clone https://github.com/Bil-2/chutki-image-tools.git
 cd chutki-image-tools
 ```
 
@@ -430,4 +430,4 @@ If you find this project helpful, please consider:
 
 **Made with ❤️ by Biltu Bag**
 
-*"Empowering creativity through technology"*
+
