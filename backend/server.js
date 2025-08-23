@@ -122,6 +122,17 @@ app.use(passport.session());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ================== Routes ==================
+
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development"
+  });
+});
+
 app.use("/api/auth", authRoutes);
 
 // Google OAuth routes
@@ -168,20 +179,22 @@ const addPrivacyHeaders = (req, res, next) => {
 };
 
 // ================== Image Processing ==================
+const uploadDir = process.env.UPLOAD_DIR || "uploads";
+const uploadPath = path.join(__dirname, uploadDir);
+if (!fs.existsSync(uploadPath)) {
+  fs.mkdirSync(uploadPath, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = "uploads";
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const filename = file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname);
 
     // Schedule automatic deletion after 30 minutes
-    const filePath = path.join(uploadDir, filename);
+    const filePath = path.join(uploadPath, filename);
     scheduleFileDeletion(filePath, filename);
 
     cb(null, filename);

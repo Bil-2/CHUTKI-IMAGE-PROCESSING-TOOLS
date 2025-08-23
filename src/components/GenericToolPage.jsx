@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { toolsConfig } from "../toolsConfig";
 
 const GenericToolPage = () => {
   const { toolName } = useParams();
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({});
+  const fileInputRef = useRef(null);
 
   // Find the tool configuration
   const tool = Object.values(toolsConfig)
@@ -37,13 +40,33 @@ const GenericToolPage = () => {
     );
   }
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
       setError(null);
       setResult(null);
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.readAsDataURL(file);
     }
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      setError(null);
+      setResult(null);
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
   };
 
   const handleInputChange = (field, value) => {
@@ -62,6 +85,7 @@ const GenericToolPage = () => {
 
     setLoading(true);
     setError(null);
+    setResult(null);
 
     try {
       const formDataToSend = new FormData();
@@ -124,39 +148,39 @@ const GenericToolPage = () => {
   const renderFormField = (field) => {
     if (field === "image") return null; // Skip image field as it's handled separately
 
-   const fieldConfig = {
-  width: { type: "number", placeholder: "Width", label: "Width" },
-  height: { type: "number", placeholder: "Height", label: "Height" },
-  dpi: { type: "number", placeholder: "300", label: "DPI", defaultValue: "300" },
-  quality: { type: "number", placeholder: "80", label: "Quality", defaultValue: "80" },
-  format: { type: "select", options: ["jpg", "png", "webp"], label: "Output Format" },
-  background: { type: "select", options: ["white", "transparent", "black"], label: "Background" },
-  size: { type: "select", options: ["35x45", "51x51", "50x70", "custom"], label: "Size" },
-  angle: { type: "number", placeholder: "90", label: "Rotation Angle", defaultValue: "90" },
-  flipDirection: { type: "select", options: ["horizontal", "vertical"], label: "Flip Direction" },
-  text: { type: "text", placeholder: "Enter text", label: "Text to add" },
-  x: { type: "number", placeholder: "50", label: "X Position", defaultValue: "50" },
-  y: { type: "number", placeholder: "50", label: "Y Position", defaultValue: "50" },
-  fontSize: { type: "number", placeholder: "24", label: "Font Size", defaultValue: "24" },
-  color: { type: "text", placeholder: "white", label: "Text Color", defaultValue: "white" },
-  pixelSize: { type: "number", placeholder: "10", label: "Pixel Size", defaultValue: "10" },
-  scale: { type: "number", placeholder: "2", label: "Scale Factor", defaultValue: "2" },
-  targetSize: { type: "number", placeholder: "100", label: "Target Size (KB)", defaultValue: "100" },
-  maxSize: { type: "number", placeholder: "100", label: "Max Size (KB)", defaultValue: "100" },
-  unit: { type: "select", options: ["mm", "cm", "inch", "px"], label: "Unit" },
-  lang: { type: "select", options: ["eng", "fra", "spa", "deu", "ita"], label: "Language" },
-  prompt: { type: "text", placeholder: "Describe this image", label: "AI Prompt" },
-  pageSize: { type: "select", options: ["A4", "A3", "Letter", "Legal"], label: "Page Size" },
-  margin: { type: "number", placeholder: "20", label: "Margin", defaultValue: "20" },
-  gridSize: { type: "select", options: ["2x2", "3x3", "4x4"], label: "Grid Size" },
-  joinDirection: { type: "select", options: ["horizontal", "vertical"], label: "Join Direction" },
-  spacing: { type: "number", placeholder: "0", label: "Spacing", defaultValue: "0" },
-  rows: { type: "number", placeholder: "2", label: "Rows", defaultValue: "2" },
-  cols: { type: "number", placeholder: "2", label: "Columns", defaultValue: "2" },
-  aspect: { type: "select", options: ["1:1", "4:5"], label: "Aspect Ratio" },
-  position: { type: "select", options: ["bottomRight", "center", "topLeft"], label: "Position" },
-  opacity: { type: "number", placeholder: "0.7", label: "Opacity", defaultValue: "0.7", min: "0", max: "1", step: "0.1" }
-};
+    const fieldConfig = {
+      width: { type: "number", placeholder: "Width", label: "Width" },
+      height: { type: "number", placeholder: "Height", label: "Height" },
+      dpi: { type: "number", placeholder: "300", label: "DPI", defaultValue: "300" },
+      quality: { type: "number", placeholder: "80", label: "Quality", defaultValue: "80" },
+      format: { type: "select", options: ["jpg", "png", "webp"], label: "Output Format" },
+      background: { type: "select", options: ["white", "transparent", "black"], label: "Background" },
+      size: { type: "select", options: ["35x45", "51x51", "50x70", "custom"], label: "Size" },
+      angle: { type: "number", placeholder: "90", label: "Rotation Angle", defaultValue: "90" },
+      flipDirection: { type: "select", options: ["horizontal", "vertical"], label: "Flip Direction" },
+      text: { type: "text", placeholder: "Enter text", label: "Text to add" },
+      x: { type: "number", placeholder: "50", label: "X Position", defaultValue: "50" },
+      y: { type: "number", placeholder: "50", label: "Y Position", defaultValue: "50" },
+      fontSize: { type: "number", placeholder: "24", label: "Font Size", defaultValue: "24" },
+      color: { type: "text", placeholder: "white", label: "Text Color", defaultValue: "white" },
+      pixelSize: { type: "number", placeholder: "10", label: "Pixel Size", defaultValue: "10" },
+      scale: { type: "number", placeholder: "2", label: "Scale Factor", defaultValue: "2" },
+      targetSize: { type: "number", placeholder: "100", label: "Target Size (KB)", defaultValue: "100" },
+      maxSize: { type: "number", placeholder: "100", label: "Max Size (KB)", defaultValue: "100" },
+      unit: { type: "select", options: ["mm", "cm", "inch", "px"], label: "Unit" },
+      lang: { type: "select", options: ["eng", "fra", "spa", "deu", "ita"], label: "Language" },
+      prompt: { type: "text", placeholder: "Describe this image", label: "AI Prompt" },
+      pageSize: { type: "select", options: ["A4", "A3", "Letter", "Legal"], label: "Page Size" },
+      margin: { type: "number", placeholder: "20", label: "Margin", defaultValue: "20" },
+      gridSize: { type: "select", options: ["2x2", "3x3", "4x4"], label: "Grid Size" },
+      joinDirection: { type: "select", options: ["horizontal", "vertical"], label: "Join Direction" },
+      spacing: { type: "number", placeholder: "0", label: "Spacing", defaultValue: "0" },
+      rows: { type: "number", placeholder: "2", label: "Rows", defaultValue: "2" },
+      cols: { type: "number", placeholder: "2", label: "Columns", defaultValue: "2" },
+      aspect: { type: "select", options: ["1:1", "4:5"], label: "Aspect Ratio" },
+      position: { type: "select", options: ["bottomRight", "center", "topLeft"], label: "Position" },
+      opacity: { type: "number", placeholder: "0.7", label: "Opacity", defaultValue: "0.7", min: "0", max: "1", step: "0.1" }
+    };
 
     const config = fieldConfig[field];
     if (!config) return null;
@@ -170,8 +194,9 @@ const GenericToolPage = () => {
           <select
             value={formData[field] || config.defaultValue || ""}
             onChange={(e) => handleInputChange(field, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
+            <option value="">Select {config.label}</option>
             {config.options.map(option => (
               <option key={option} value={option}>{option}</option>
             ))}
@@ -185,7 +210,7 @@ const GenericToolPage = () => {
             min={config.min}
             max={config.max}
             step={config.step}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
         )}
       </div>
@@ -193,89 +218,149 @@ const GenericToolPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
             {tool.name}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             {tool.description}
           </p>
         </div>
 
-        
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Image Upload and Preview */}
+          <div className="space-y-6">
+            {/* File Upload Area */}
+            <div
+              className="border-2 border-dashed border-purple-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer bg-white"
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
 
-        {/* Tool Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* File Upload */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Image
-              </label>
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-purple-400 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  {selectedFile ? selectedFile.name : "Click to upload or drag and drop"}
-                </label>
-                {selectedFile && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              {!preview ? (
+                <div>
+                  <div className="text-6xl mb-4">📷</div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    Select Or Drag & Drop Image Here
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    Supports JPG, PNG, WEBP, HEIC formats
                   </p>
-                )}
-              </div>
+                  <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                    Select Image
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="max-w-full h-64 object-contain mx-auto rounded-lg shadow-lg"
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFile(null);
+                      setPreview(null);
+                    }}
+                    className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Dynamic Form Fields */}
-            {tool.fields && tool.fields.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {tool.fields.map(field => renderFormField(field))}
+            {/* Preview Section */}
+            {preview && (
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Image Preview</h3>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>File: {selectedFile?.name}</span>
+                  <span>Size: {(selectedFile?.size / 1024).toFixed(1)} KB</span>
+                </div>
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
+            {/* Results */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800">{error}</p>
+              </div>
+            )}
+
+            {result && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-800">{result}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Settings */}
+          <div className="space-y-6">
+            {/* Settings Panel */}
+            {tool.fields && tool.fields.length > 0 && (
+              <div className="bg-white rounded-lg p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Tool Settings</h3>
+                <div className="space-y-4">
+                  {tool.fields.map(field => renderFormField(field))}
+                </div>
+              </div>
+            )}
+
+            {/* Generate Button */}
+            <motion.button
+              onClick={handleSubmit}
               disabled={!selectedFile || loading}
-              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
+              className={`w-full py-4 rounded-lg font-semibold text-lg transition-all ${!selectedFile || loading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transform hover:scale-105'
+                }`}
+              whileHover={!loading && selectedFile ? { scale: 1.02 } : {}}
+              whileTap={!loading && selectedFile ? { scale: 0.98 } : {}}
             >
-              {loading ? "Processing..." : `Process ${tool.name}`}
-            </button>
-          </form>
-        </div>
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                `Process ${tool.name}`
+              )}
+            </motion.button>
 
-        {/* Results */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">{error}</p>
+            {/* Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Instructions:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Upload a clear, high-quality image</li>
+                <li>• Adjust settings according to your needs</li>
+                <li>• Click process to generate your result</li>
+                <li>• Your processed file will be downloaded automatically</li>
+              </ul>
+            </div>
+
+            {/* Back Button */}
+            <div className="text-center">
+              <button
+                onClick={() => navigate("/")}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                ← Back to Tools
+              </button>
+            </div>
           </div>
-        )}
-
-        {result && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-            <p className="text-green-800 dark:text-green-200">{result}</p>
-          </div>
-        )}
-
-        {/* Back Button */}
-        <div className="text-center">
-          <button
-            onClick={() => navigate("/")}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
-          >
-            ← Back to Tools
-          </button>
         </div>
       </div>
     </div>
