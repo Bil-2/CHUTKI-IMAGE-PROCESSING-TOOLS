@@ -21,8 +21,8 @@ CHUTKI Image Tools is a full-stack web application that provides various image p
 ## Access Links
 
 - **Frontend Application**: [https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app](https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app)
-- **Backend API**: [https://backend-3zrrr1epg-biltu-bags-projects.vercel.app](https://backend-3zrrr1epg-biltu-bags-projects.vercel.app)
-- **API Health Check**: [https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/health](https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/health)
+- **Backend API**: [https://backend-hz6tlojl3-biltu-bags-projects.vercel.app](https://backend-hz6tlojl3-biltu-bags-projects.vercel.app)
+- **API Health Check**: [https://backend-hz6tlojl3-biltu-bags-projects.vercel.app/api/health](https://backend-hz6tlojl3-biltu-bags-projects.vercel.app/api/health)
 
 ## Configuration Files
 

@@ -7,8 +7,8 @@
 - **Repository**: https://github.com/Bil-2/CHUTKI-IMAGE-TOOL.git
 
 ### Backend API
-- **URL**: https://backend-3zrrr1epg-biltu-bags-projects.vercel.app
-- **API Health Check**: https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/health
+- **URL**: https://backend-hz6tlojl3-biltu-bags-projects.vercel.app
+- **API Health Check**: https://backend-hz6tlojl3-biltu-bags-projects.vercel.app/api/health
 
 ## Accessing the Application
 

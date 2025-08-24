@@ -9,9 +9,6 @@ import PassportPhotoMaker from "./components/PassportPhotoMaker";
 import GenericToolPage from "./components/GenericToolPage";
 import OAuthSuccess from "./OAuthSuccess";
 import Login from "./Login";
-import RealImageUpload from "./components/RealImageUpload";
-import RealPassportPhotoMaker from "./components/RealPassportPhotoMaker";
-import RealImageConverter from "./components/RealImageConverter";
 
 
 function App() {
@@ -122,9 +119,6 @@ function App() {
         <nav className="mt-16 sm:mt-20 flex flex-col items-start px-5 sm:pl-10 space-y-4 sm:space-y-6 text-white text-sm sm:text-lg font-semibold">
           {[
             "Home",
-            "Real Image Processing",
-            "Real Passport Photo",
-            "Real Image Converter",
             "Merge PDF's",
             "Resize Image Pixel",
             "Passport Size Photo",
@@ -142,13 +136,7 @@ function App() {
               href="#"
               onClick={() => {
                 toggleMenu();
-                if (item === "Real Image Processing") {
-                  navigate("/real-image-processing");
-                } else if (item === "Real Passport Photo") {
-                  navigate("/real-passport-photo");
-                } else if (item === "Real Image Converter") {
-                  navigate("/real-image-converter");
-                }
+                // Removed navigation to non-existent routes
               }}
               className="hover:text-purple-300"
             >
@@ -205,10 +193,7 @@ function App() {
         {/* Passport Photo Maker */}
         <Route path="/passport-photo" element={<PassportPhotoMaker />} />
 
-        {/* Real Working Tools */}
-        <Route path="/real-image-processing" element={<RealImageUpload />} />
-        <Route path="/real-passport-photo" element={<RealPassportPhotoMaker />} />
-        <Route path="/real-image-converter" element={<RealImageConverter />} />
+        {/* Removed routes for missing components */}
 
         {/* Image conversion tools */}
         <Route path="/tools" element={<ImageConversionTools />} />

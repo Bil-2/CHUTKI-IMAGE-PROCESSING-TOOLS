@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/$1"
+      "destination": "https://backend-fsdm6hd2l-biltu-bags-projects.vercel.app/api/$1"
     }
   ],
   "headers": [

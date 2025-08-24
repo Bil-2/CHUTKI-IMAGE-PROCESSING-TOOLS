@@ -20,14 +20,14 @@ export default async function handler(req, res) {
   try {
     // For demo purposes, redirect to frontend with a demo token
     const demoToken = `google_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const frontendUrl = 'https://chutki-frontend-m3qz6dnnf-biltu-bags-projects.vercel.app';
+    const frontendUrl = 'https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app';
 
     // Redirect to frontend with token
     res.redirect(`${frontendUrl}/oauth-success?token=${demoToken}`);
 
   } catch (error) {
     console.error('Google OAuth error:', error);
-    const frontendUrl = 'https://chutki-frontend-m3qz6dnnf-biltu-bags-projects.vercel.app';
+    const frontendUrl = 'https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app';
     res.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
 }
