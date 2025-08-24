@@ -133,11 +133,30 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Import API handlers
+import uploadHandler from './api/upload.js';
+import convertHandler from './api/convert.js';
+import compressHandler from './api/compress.js';
+import passportPhotoHandler from './api/passport-photo.js';
+import rotateHandler from './api/tools/rotate.js';
+import flipHandler from './api/tools/flip.js';
+import resizeCmHandler from './api/tools/resize-cm.js';
+
+// API endpoints
+app.use('/api/upload', uploadHandler);
+app.use('/api/convert', convertHandler);
+app.use('/api/compress', compressHandler);
+app.use('/api/passport-photo', passportPhotoHandler);
+app.use('/api/tools/rotate', rotateHandler);
+app.use('/api/tools/flip', flipHandler);
+app.use('/api/tools/resize-cm', resizeCmHandler);
+
 app.use("/api/auth", authRoutes);
 
 // Google OAuth routes
 app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
+// Handle both relative and absolute callback URLs
 app.get("/api/auth/google/callback",
   passport.authenticate("google", {
     failureRedirect: `${process.env.CLIENT_URL}/login`,

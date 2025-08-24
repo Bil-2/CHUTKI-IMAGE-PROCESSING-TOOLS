@@ -6,13 +6,21 @@ import User from "../models/User.js";
 
 dotenv.config();
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback",
-    },
+// Skip Google OAuth initialization if credentials are not properly set
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+// Only initialize Google OAuth if credentials are properly set
+if (googleClientId && googleClientSecret && 
+    googleClientId !== 'your_google_client_id_here' && 
+    googleClientSecret !== 'your_google_client_secret_here') {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: googleClientId,
+        clientSecret: googleClientSecret,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         console.log("Google OAuth profile received:", {
@@ -54,6 +62,7 @@ passport.use(
     }
   )
 );
+}
 
 passport.serializeUser((user, done) => {
   console.log("Serializing user:", user.id || user._id);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import config from "./config";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/login", {
+      const res = await fetch(`${config.API_BASE_URL}${config.ENDPOINTS.LOGIN}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -60,7 +61,7 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = "http://localhost:5001/api/auth/google";
+    window.location.href = `${config.API_BASE_URL}${config.ENDPOINTS.GOOGLE_AUTH}`;
   };
 
   return (
