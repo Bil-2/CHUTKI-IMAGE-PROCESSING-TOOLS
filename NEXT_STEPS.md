@@ -6,7 +6,7 @@ You've successfully deployed your CHUTKI Image Tools application to Vercel. Here
 
 ## 🌐 **Your Live Application**
 
-**Main URL**: `https://chutki-frontend-4zmusga13-biltu-bags-projects.vercel.app`
+**Main URL**: `https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app`
 
 ## ✅ **What's Already Working**
 

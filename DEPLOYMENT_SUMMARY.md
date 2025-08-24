@@ -20,7 +20,7 @@ CHUTKI Image Tools is a full-stack web application that provides various image p
 
 ## Access Links
 
-- **Frontend Application**: [https://chutki-image-tools.vercel.app](https://chutki-image-tools.vercel.app)
+- **Frontend Application**: [https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app](https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app)
 - **Backend API**: [https://backend-3zrrr1epg-biltu-bags-projects.vercel.app](https://backend-3zrrr1epg-biltu-bags-projects.vercel.app)
 - **API Health Check**: [https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/health](https://backend-3zrrr1epg-biltu-bags-projects.vercel.app/api/health)
 
@@ -35,9 +35,11 @@ CHUTKI Image Tools is a full-stack web application that provides various image p
 - **Deployment Guide**: See `VERCEL_DEPLOYMENT_GUIDE.md`
 - **OAuth Setup**: See `VERCEL_OAUTH_SETUP.md`
 - **Project Links**: See `VERCEL_PROJECT_LINKS.md`
+- **Git Troubleshooting**: See `GIT_TROUBLESHOOTING.md`
 
 ## Notes
 
 - The application uses automatic cleanup for uploaded images (30-minute retention)
 - All API endpoints are protected with JWT authentication except for auth routes
 - Google OAuth requires proper configuration in both Google Cloud Console and Vercel environment variables
+- When pushing to GitHub, if you encounter a 'non-fast-forward' error, you may need to pull changes first with `git pull origin main` before pushing

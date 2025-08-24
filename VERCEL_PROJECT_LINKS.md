@@ -3,8 +3,8 @@
 ## Project Links
 
 ### Frontend Application
-- **URL**: https://chutki-image-tools.vercel.app
-- **Repository**: https://github.com/biltu-bags-projects/CHUTKI
+- **URL**: https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app
+- **Repository**: https://github.com/Bil-2/CHUTKI-IMAGE-TOOL.git
 
 ### Backend API
 - **URL**: https://backend-3zrrr1epg-biltu-bags-projects.vercel.app
@@ -12,7 +12,7 @@
 
 ## Accessing the Application
 
-1. Visit the frontend URL: https://chutki-image-tools.vercel.app
+1. Visit the frontend URL: https://chutki-frontend-c7dxak7fx-biltu-bags-projects.vercel.app
 2. You can register a new account or log in with Google OAuth
 3. Access all image processing tools from the dashboard
 
