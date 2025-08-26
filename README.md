@@ -51,7 +51,7 @@ CHUTKI is a comprehensive image processing web application that provides various
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/Bil-2/CHUTKI-IMAGE-TOOL.git>
    cd CHUTKI/backend
    ```
 
@@ -82,7 +82,7 @@ CHUTKI is a comprehensive image processing web application that provides various
    # Google OAuth (Optional)
    GOOGLE_CLIENT_ID=your-google-client-id
    GOOGLE_CLIENT_SECRET=your-google-client-secret
-   GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
+   GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
    
    # File Settings
    MAX_FILE_SIZE=10485760
@@ -128,7 +128,7 @@ Content-Type: application/json
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "Password123"
 }
 ```
 
@@ -139,7 +139,7 @@ Content-Type: application/json
 
 {
   "email": "john@example.com",
-  "password": "password123"
+  "password": "Password123"
 }
 ```
 
@@ -292,4 +292,4 @@ For support and questions, please open an issue on the GitHub repository.
 
 ---
 
-**CHUTKI** - Making image processing simple and accessible for everyone! 🚀
+**CHUTKI** - Making image processing simple and accessible for everyone! 
