@@ -1,90 +1,57 @@
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import User from "../models/User.js";
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import User from '../models/User.js';
 
-dotenv.config();
-
-// Skip Google OAuth initialization if credentials are not properly set
-const googleClientId = process.env.GOOGLE_CLIENT_ID;
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-// Only initialize Google OAuth if credentials are properly set
-if (googleClientId && googleClientSecret && 
-    googleClientId !== 'your_google_client_id_here' && 
-    googleClientSecret !== 'your_google_client_secret_here') {
-  passport.use(
-    new GoogleStrategy(
-      {
-        clientID: googleClientId,
-        clientSecret: googleClientSecret,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
-      },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        console.log("Google OAuth profile received:", {
-          id: profile.id,
-          displayName: profile.displayName,
-          email: profile.emails?.[0]?.value,
-        });
-
-        // Check if MongoDB is available
-        if (mongoose.connection.readyState === 1) {
-          const user = await User.findOrCreateGoogleUser(profile);
-
-          console.log("User found/created:", {
-            id: user._id,
-            email: user.email,
-            name: user.name,
-          });
-
-          // Update last login
-          await user.updateLastLogin();
-
-          // Return user here
-          return done(null, user);
-        } else {
-          // Fallback for development without MongoDB
-          const mockUser = {
-            id: profile.id,
-            email: profile.emails?.[0]?.value || "no-email@example.com",
-            name: profile.displayName || "Unknown User",
-            googleId: profile.id,
-          };
-          console.log("Using mock user for development:", mockUser);
-          return done(null, mockUser);
-        }
-      } catch (error) {
-        console.error("Google OAuth error:", error);
-        return done(error, null);
-      }
+// JWT Strategy for API authentication
+passport.use(new JwtStrategy({
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: process.env.JWT_SECRET || 'chutki-secret-key-2024'
+}, async (payload, done) => {
+  try {
+    const user = await User.findById(payload.id);
+    if (user && user.isActive) {
+      return done(null, user);
     }
-  )
-);
-}
+    return done(null, false);
+  } catch (error) {
+    return done(error, false);
+  }
+}));
 
+// Google OAuth Strategy
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID || 'your-google-client-id',
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'your-google-client-secret',
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback'
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    console.log('Google OAuth Profile:', {
+      id: profile.id,
+      displayName: profile.displayName,
+      email: profile.emails?.[0]?.value,
+      photo: profile.photos?.[0]?.value
+    });
+
+    const user = await User.findOrCreateGoogleUser(profile);
+    return done(null, user);
+  } catch (error) {
+    console.error('Google OAuth Error:', error);
+    return done(error, null);
+  }
+}));
+
+// Serialize user for session
 passport.serializeUser((user, done) => {
-  console.log("Serializing user:", user.id || user._id);
-  done(null, user.id || user._id);
+  done(null, user._id);
 });
 
+// Deserialize user from session
 passport.deserializeUser(async (id, done) => {
   try {
-    console.log("Deserializing user:", id);
-    if (mongoose.connection.readyState === 1) {
-      const user = await User.findById(id).select("-password");
-      done(null, user);
-    } else {
-      const mockUser = {
-        id: id,
-        email: "dev-user@example.com",
-        name: "Development User",
-      };
-      done(null, mockUser);
-    }
+    const user = await User.findById(id);
+    done(null, user);
   } catch (error) {
-    console.error("Deserialize error:", error);
     done(error, null);
   }
 });

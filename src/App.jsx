@@ -1,56 +1,114 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Home from "./components/Home";
+import Dashboard from "./components/Dashboard";
 import ImageTools from "./components/ImageTools";
 import ChutkiAssistant from "./components/ChutkiAssistant";
 import Footer from "./components/Footer";
-import ImageConversionTools from "./components/ImageConversionTools";
-import ToolPage from "./components/ToolPage";
-import PassportPhotoMaker from "./components/PassportPhotoMaker";
 import GenericToolPage from "./components/GenericToolPage";
-import OAuthSuccess from "./OAuthSuccess";
-import Login from "./Login";
+import AuthSuccess from "./components/AuthSuccess";
 
+// Import individual tool components
+import PassportPhotoTool from "./components/tools/PassportPhotoTool";
+import ResizePixelTool from "./components/tools/ResizePixelTool";
+import CompressImageTool from "./components/tools/CompressImageTool";
+import RotateImageTool from "./components/tools/RotateImageTool";
+import FlipImageTool from "./components/tools/FlipImageTool";
+import HeicToJpgTool from "./components/tools/HeicToJpgTool";
 
-function App() {
-  const navigate = useNavigate();
-  const location = useLocation();
+// Main App Content Component
+function AppContent() {
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [tokenChecked, setTokenChecked] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, loading } = useAuth();
 
-  // ✅ Token handling
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    // Don't redirect if we're on oauth-success route
-    if (location.pathname === "/oauth-success") {
-      setTokenChecked(true);
-      return;
-    }
-
-    if (!token) {
-      navigate("/login", { replace: true });
-    }
-    setTokenChecked(true);
-  }, [token, navigate, location.pathname]);
-
-  // ✅ Dark mode toggle
+  // Dark mode toggle
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
   const toggleTheme = () => setDarkMode((prev) => !prev);
   const toggleMenu = () => setMenuOpen((prev) => !prev);
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login", { replace: true });
+
+  const handleNavigation = (item) => {
+    toggleMenu();
+
+    // Navigation mapping for menu items to tool routes
+    const navigationMap = {
+      "Home": "/",
+      "Merge PDF's": "/tools/image-to-pdf",
+      "Resize Image Pixel": "/tools/resize-pixel",
+      "Passport Size Photo": "/tools/passport-photo",
+      "Increase Image Size In KB": "/tools/increase-size-kb",
+      "Remove Image Background": "/tools/remove-background",
+      "Convert DPI (200,300,600)": "/tools/convert-dpi",
+      "PDF To Images": "/tools/pdf-to-jpg",
+      "Convert Image": "/tools/heic-to-jpg",
+      "Compress Image": "/tools/compress-50kb",
+      "Compress PDF": "/tools/compress-50kb", // Using image compression for now
+      "Crop Image": "/tools/circle-crop"
+    };
+
+    const route = navigationMap[item];
+    if (route) {
+      navigate(route);
+    }
   };
 
-  if (!tokenChecked) return null; // Wait until token check finishes
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show only login/register routes
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+          }}
+        />
+
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/auth/success" element={<AuthSuccess />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+        }}
+      />
+
       {/* ========= HEADER ========= */}
       <header className="relative shadow-lg z-50">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
@@ -78,15 +136,6 @@ function App() {
               aria-label="Toggle Dark Mode"
             >
               {darkMode ? "☀️" : "🌙"}
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="p-1.5 sm:p-2 rounded-full bg-gradient-to-br from-red-500 to-pink-500 text-white shadow-md hover:shadow-lg hover:scale-110 transition-all duration-300"
-              title="Logout"
-              aria-label="Logout"
-            >
-              ⏻
             </button>
 
             <button
@@ -131,95 +180,236 @@ function App() {
             "Compress PDF",
             "Crop Image",
           ].map((item, idx) => (
-            <a
+            <button
               key={idx}
-              href="#"
-              onClick={() => {
-                toggleMenu();
-                // Removed navigation to non-existent routes
-              }}
-              className="hover:text-purple-300"
+              onClick={() => handleNavigation(item)}
+              className="hover:text-purple-300 text-left"
             >
               | {item}
-            </a>
+            </button>
           ))}
         </nav>
       </div>
 
       {/* ========= ROUTES ========= */}
       <Routes>
-        {/* Login */}
-        <Route path="/login" element={<Login />} />
+        {/* Home Page */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
 
-        {/* OAuth Success */}
-        <Route path="/oauth-success" element={<OAuthSuccess />} />
+        {/* Dashboard */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
 
-        {/* Home */}
-        <Route
-          path="/"
-          element={
-            <>
-              {/* ======= INTRO SECTION ======= */}
-              <section className="text-center px-3 sm:px-4 py-4 sm:py-6">
-                <h2 className="text-base sm:text-2xl font-bold text-gray-900 dark:text-white animate-fade-up">
-                  Chutki Image Tool - Compress & Edit Pictures
-                </h2>
-                <p className="max-w-2xl mx-auto text-xs sm:text-base text-gray-600 dark:text-gray-300 mt-3 sm:mt-4 leading-relaxed animate-fade-up-delay">
-                  Chutki Image Tool is a collection of online tools like Image Compressor, Image Resize Tool,
-                  and Image Conversion Tools (Image to JPG, Image to PNG, etc).
-                </p>
-              </section>
+        {/* Individual Tool Routes */}
+        <Route path="/tools/passport-photo" element={
+          <ProtectedRoute>
+            <PassportPhotoTool />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/resize-pixel" element={
+          <ProtectedRoute>
+            <ResizePixelTool />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-50kb" element={
+          <ProtectedRoute>
+            <CompressImageTool />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/rotate" element={
+          <ProtectedRoute>
+            <RotateImageTool />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/flip" element={
+          <ProtectedRoute>
+            <FlipImageTool />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/heic-to-jpg" element={
+          <ProtectedRoute>
+            <HeicToJpgTool />
+          </ProtectedRoute>
+        } />
 
-              {/* Search */}
-              <section className="sticky top-0 z-40 bg-gradient-to-r from-white/80 via-purple-50/60 to-white/80 dark:from-gray-900/80 dark:via-purple-900/40 dark:to-gray-900/80 backdrop-blur-md px-2 sm:px-4 py-2 sm:py-3 shadow-lg">
-                <div className="max-w-full sm:max-w-md mx-auto flex items-center gap-2 border border-purple-300/60 dark:border-purple-500/50 rounded-full px-2 sm:px-4 py-1 sm:py-1.5">
-                  <input
-                    type="text"
-                    placeholder="Search tools..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-300 text-xs sm:text-base"
-                  />
-                </div>
-              </section>
+        {/* More individual tool routes */}
+        <Route path="/tools/reduce-size-kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/increase-size-kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/remove-background" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/convert-dpi" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/pdf-to-jpg" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/image-to-pdf" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/circle-crop" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/grayscale" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/watermark" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/resize-cm" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/resize-mm" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/resize-inches" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/webp-to-jpg" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/jpeg-to-png" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/png-to-jpeg" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/jpg-to-text" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-5kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-10kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-15kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-20kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-25kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-30kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-40kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-100kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-150kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-200kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-300kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-500kb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-1mb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/tools/compress-2mb" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
 
-              <ImageTools searchQuery={searchQuery} />
-              <ChutkiAssistant />
-              <Footer />
-            </>
-          }
-        />
+        {/* Fallback for any other tool routes */}
+        <Route path="/tools/:toolName" element={
+          <ProtectedRoute>
+            <GenericToolPage />
+          </ProtectedRoute>
+        } />
 
-        {/* Passport Photo Maker */}
-        <Route path="/passport-photo" element={<PassportPhotoMaker />} />
-
-        {/* Removed routes for missing components */}
-
-        {/* Image conversion tools */}
-        <Route path="/tools" element={<ImageConversionTools />} />
-
-        {/* Dynamic tool routes */}
-        <Route path="/tools/:toolName" element={<GenericToolPage />} />
-
-        {/* Legacy specific routes (can be removed later) */}
-        <Route
-          path="/tools/heic-to-jpg"
-          element={<ToolPage title="HEIC to JPG" apiEndpoint="/api/convert/heic-to-jpg" />}
-        />
-        <Route
-          path="/tools/webp-to-jpg"
-          element={<ToolPage title="WEBP to JPG" apiEndpoint="/api/convert/webp-to-jpg" />}
-        />
-        <Route
-          path="/tools/jpeg-to-png"
-          element={<ToolPage title="JPEG to PNG" apiEndpoint="/api/convert/jpeg-to-png" />}
-        />
-        <Route
-          path="/tools/png-to-jpeg"
-          element={<ToolPage title="PNG to JPEG" apiEndpoint="/api/convert/png-to-jpeg" />}
-        />
+        {/* Catch all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

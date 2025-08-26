@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import config from '../config.js';
 
 const PassportPhotoMaker = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -82,7 +83,7 @@ const PassportPhotoMaker = () => {
     }
 
     try {
-      const response = await fetch('/api/passport-photo', {
+      const response = await fetch(`${config.API_BASE_URL}/api/tools/passport-photo`, {
         method: 'POST',
         body: formData,
       });

@@ -1,12 +1,14 @@
 // Configuration for CHUTKI Image Tools
 const config = {
-  // Backend API URL - Use production URL directly for Vercel deployment
-  // Updated to match the URL in vercel.json
-  API_BASE_URL: 'https://backend-fsdm6hd2l-biltu-bags-projects.vercel.app',
+  // Backend API URL - Use localhost for development, production URL for production
+  API_BASE_URL: process.env.NODE_ENV === 'production'
+    ? 'https://backend-fsdm6hd2l-biltu-bags-projects.vercel.app'
+    : 'http://localhost:5000',
 
-  // Frontend URL - Use current production URL
-  // Updated to use the current deployment URL
-  FRONTEND_URL: 'https://chutki-frontend-5q9sgmeth-biltu-bags-projects.vercel.app',
+  // Frontend URL - Use localhost for development, production URL for production
+  FRONTEND_URL: process.env.NODE_ENV === 'production'
+    ? 'https://chutki-frontend-5q9sgmeth-biltu-bags-projects.vercel.app'
+    : 'http://localhost:5173',
 
   // API endpoints
   ENDPOINTS: {
@@ -16,7 +18,11 @@ const config = {
     UPLOAD: '/api/upload',
     CONVERT: '/api/convert',
     COMPRESS: '/api/compress',
-    HEALTH: '/api/health'
+    HEALTH: '/api/health',
+    // Modular tools endpoints
+    TOOLS_HEALTH: '/api/tools/health',
+    TOOLS_LIST: '/api/tools/list',
+    TOOLS_BASE: '/api/tools'
   }
 };
 

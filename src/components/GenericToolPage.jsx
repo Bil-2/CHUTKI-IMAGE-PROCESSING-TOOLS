@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toolsConfig } from "../toolsConfig";
@@ -70,10 +70,14 @@ const GenericToolPage = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      console.log(`Updated ${field}:`, value); // Debug log
+      return newData;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -89,14 +93,16 @@ const GenericToolPage = () => {
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("image", selectedFile);
+      formDataToSend.append("file", selectedFile);
 
       // Add other form fields
       Object.keys(formData).forEach(key => {
-        if (formData[key]) {
+        if (formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
           formDataToSend.append(key, formData[key]);
         }
       });
+
+      console.log("Sending form data:", Object.fromEntries(formDataToSend.entries()));
 
       const response = await fetch(tool.endpoint, {
         method: tool.method,
@@ -104,7 +110,11 @@ const GenericToolPage = () => {
       });
 
       if (response.ok) {
-        if (tool.name.toLowerCase().includes("pdf")) {
+        if (tool.returnsJson || tool.name.toLowerCase().includes("text") || tool.name.toLowerCase().includes("dpi") || tool.name.toLowerCase().includes("color")) {
+          // Handle JSON response
+          const data = await response.json();
+          setResult(data.text || data.dpi || data.color || data.message || "Processing completed");
+        } else if (tool.name.toLowerCase().includes("pdf")) {
           // Handle PDF download
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
@@ -116,10 +126,6 @@ const GenericToolPage = () => {
           window.URL.revokeObjectURL(url);
           document.body.removeChild(a);
           setResult("PDF generated successfully!");
-        } else if (tool.name.toLowerCase().includes("text") || tool.name.toLowerCase().includes("caption")) {
-          // Handle text response
-          const data = await response.json();
-          setResult(data.text || data.caption || "Processing completed");
         } else {
           // Handle image download
           const blob = await response.blob();
@@ -146,7 +152,7 @@ const GenericToolPage = () => {
   };
 
   const renderFormField = (field) => {
-    if (field === "image") return null; // Skip image field as it's handled separately
+    if (field === "image" || field === "file") return null; // Skip image/file fields as they're handled separately
 
     const fieldConfig = {
       width: { type: "number", placeholder: "Width", label: "Width" },
@@ -157,8 +163,11 @@ const GenericToolPage = () => {
       background: { type: "select", options: ["white", "transparent", "black"], label: "Background" },
       size: { type: "select", options: ["35x45", "51x51", "50x70", "custom"], label: "Size" },
       angle: { type: "number", placeholder: "90", label: "Rotation Angle", defaultValue: "90" },
+      direction: { type: "select", options: ["horizontal", "vertical"], label: "Direction" },
       flipDirection: { type: "select", options: ["horizontal", "vertical"], label: "Flip Direction" },
       text: { type: "text", placeholder: "Enter text", label: "Text to add" },
+      name: { type: "text", placeholder: "Enter name", label: "Name" },
+      dob: { type: "text", placeholder: "DD/MM/YYYY", label: "Date of Birth" },
       x: { type: "number", placeholder: "50", label: "X Position", defaultValue: "50" },
       y: { type: "number", placeholder: "50", label: "Y Position", defaultValue: "50" },
       fontSize: { type: "number", placeholder: "24", label: "Font Size", defaultValue: "24" },
@@ -166,8 +175,11 @@ const GenericToolPage = () => {
       pixelSize: { type: "number", placeholder: "10", label: "Pixel Size", defaultValue: "10" },
       scale: { type: "number", placeholder: "2", label: "Scale Factor", defaultValue: "2" },
       targetSize: { type: "number", placeholder: "100", label: "Target Size (KB)", defaultValue: "100" },
+      targetKB: { type: "number", placeholder: "100", label: "Target Size (KB)", defaultValue: "100" },
+      targetMB: { type: "number", placeholder: "1", label: "Target Size (MB)", defaultValue: "1" },
       maxSize: { type: "number", placeholder: "100", label: "Max Size (KB)", defaultValue: "100" },
       unit: { type: "select", options: ["mm", "cm", "inch", "px"], label: "Unit" },
+      language: { type: "select", options: ["eng", "fra", "spa", "deu", "ita"], label: "Language" },
       lang: { type: "select", options: ["eng", "fra", "spa", "deu", "ita"], label: "Language" },
       prompt: { type: "text", placeholder: "Describe this image", label: "AI Prompt" },
       pageSize: { type: "select", options: ["A4", "A3", "Letter", "Legal"], label: "Page Size" },
@@ -179,7 +191,15 @@ const GenericToolPage = () => {
       cols: { type: "number", placeholder: "2", label: "Columns", defaultValue: "2" },
       aspect: { type: "select", options: ["1:1", "4:5"], label: "Aspect Ratio" },
       position: { type: "select", options: ["bottomRight", "center", "topLeft"], label: "Position" },
-      opacity: { type: "number", placeholder: "0.7", label: "Opacity", defaultValue: "0.7", min: "0", max: "1", step: "0.1" }
+      opacity: { type: "number", placeholder: "0.7", label: "Opacity", defaultValue: "0.7", min: "0", max: "1", step: "0.1" },
+      maintain: { type: "select", options: ["true", "false"], label: "Maintain Aspect Ratio" },
+      enhance: { type: "select", options: ["true", "false"], label: "Enhance Quality" },
+      quantity: { type: "number", placeholder: "4", label: "Number of Copies", defaultValue: "4" },
+      border: { type: "select", options: ["none", "thin", "thick"], label: "Border Style" },
+      intensity: { type: "number", placeholder: "10", label: "Effect Intensity", defaultValue: "10" },
+      gender: { type: "select", options: ["male", "female", "random"], label: "Gender" },
+      age: { type: "select", options: ["young", "adult", "senior"], label: "Age Group" },
+      style: { type: "select", options: ["realistic", "artistic", "cartoon"], label: "Style" }
     };
 
     const config = fieldConfig[field];
@@ -192,7 +212,7 @@ const GenericToolPage = () => {
         </label>
         {config.type === "select" ? (
           <select
-            value={formData[field] || config.defaultValue || ""}
+            value={formData[field] ?? config.defaultValue ?? ""}
             onChange={(e) => handleInputChange(field, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           >
@@ -205,7 +225,7 @@ const GenericToolPage = () => {
           <input
             type={config.type}
             placeholder={config.placeholder}
-            value={formData[field] || config.defaultValue || ""}
+            value={formData[field] ?? config.defaultValue ?? ""}
             onChange={(e) => handleInputChange(field, e.target.value)}
             min={config.min}
             max={config.max}
@@ -216,6 +236,37 @@ const GenericToolPage = () => {
       </div>
     );
   };
+
+  // Initialize form data with default values when tool changes
+  React.useEffect(() => {
+    if (tool && tool.fields) {
+      const initialData = {};
+      tool.fields.forEach(field => {
+        const fieldConfig = {
+          dpi: "300",
+          quality: "80",
+          angle: "90",
+          fontSize: "24",
+          color: "white",
+          pixelSize: "10",
+          scale: "2",
+          targetSize: "100",
+          maxSize: "100",
+          x: "50",
+          y: "50",
+          margin: "20",
+          spacing: "0",
+          rows: "2",
+          cols: "2",
+          opacity: "0.7"
+        };
+        if (fieldConfig[field]) {
+          initialData[field] = fieldConfig[field];
+        }
+      });
+      setFormData(initialData);
+    }
+  }, [tool]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4">
@@ -314,7 +365,12 @@ const GenericToolPage = () => {
               <div className="bg-white rounded-lg p-6 shadow-lg">
                 <h3 className="text-lg font-semibold mb-4">Tool Settings</h3>
                 <div className="space-y-4">
-                  {tool.fields.map(field => renderFormField(field))}
+                  {console.log("Tool fields:", tool.fields)}
+                  {console.log("Form data:", formData)}
+                  {tool.fields.map(field => {
+                    console.log(`Rendering field: ${field}`);
+                    return renderFormField(field);
+                  })}
                 </div>
               </div>
             )}

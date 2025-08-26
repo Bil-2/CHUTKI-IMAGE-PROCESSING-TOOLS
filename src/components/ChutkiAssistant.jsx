@@ -22,7 +22,7 @@ const ChutkiAssistant = ({ onSelect }) => {
       label: "Convert Images To PDF",
       value: "image-to-pdf",
       description: "Convert multiple images to a single PDF",
-      endpoint: "/api/convert/image-to-pdf",
+      endpoint: "/api/tools/image-to-pdf",
       multiple: true
     },
     {
@@ -36,7 +36,7 @@ const ChutkiAssistant = ({ onSelect }) => {
       label: "JPG to Text (OCR)",
       value: "ocr",
       description: "Extract text from images using OCR",
-      endpoint: "/api/ocr",
+      endpoint: "/api/tools/ocr",
       multiple: false
     },
     {
@@ -182,8 +182,11 @@ const ChutkiAssistant = ({ onSelect }) => {
   };
 
   const processAction = async (action, options = {}) => {
-    if (!selectedFile) {
-      alert("Please select a file first");
+    if (!selectedFile || selectedFile.length === 0) {
+      // Instead of alert, trigger file selection
+      setPendingAction(action.value);
+      setPendingOptions(options || {});
+      fileInputRef.current?.click();
       return;
     }
 
