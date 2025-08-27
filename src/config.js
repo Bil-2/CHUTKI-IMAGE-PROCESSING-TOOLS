@@ -1,14 +1,10 @@
 // Configuration for CHUTKI Image Tools
 const config = {
-  // Backend API URL - Use localhost for development, production URL for production
-  API_BASE_URL: process.env.NODE_ENV === 'production'
-    ? 'https://backend-fsdm6hd2l-biltu-bags-projects.vercel.app'
-    : 'http://localhost:5000',
+  // Backend API URL - Use environment variable or fallback to localhost
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
 
   // Frontend URL - Use localhost for development, production URL for production
-  FRONTEND_URL: process.env.NODE_ENV === 'production'
-    ? 'https://chutki-frontend-5q9sgmeth-biltu-bags-projects.vercel.app'
-    : 'http://localhost:5173',
+  FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL || 'http://localhost:5173',
 
   // API endpoints
   ENDPOINTS: {

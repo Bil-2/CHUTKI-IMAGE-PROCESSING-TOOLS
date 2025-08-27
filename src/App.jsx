@@ -23,14 +23,19 @@ import HeicToJpgTool from "./components/tools/HeicToJpgTool";
 
 // Main App Content Component
 function AppContent() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Initialize dark mode from localStorage or default to false
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, logout } = useAuth();
 
-  // Dark mode toggle
+  // Dark mode toggle with localStorage persistence
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
   const toggleTheme = () => setDarkMode((prev) => !prev);
@@ -79,8 +84,43 @@ function AppContent() {
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#363636',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: '#fff',
+              borderRadius: '20px',
+              padding: '20px 24px',
+              fontSize: '15px',
+              fontWeight: '500',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1)',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              minWidth: '300px',
+              maxWidth: '400px',
+            },
+            success: {
+              style: {
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#fff',
+                borderRadius: '20px',
+                padding: '20px 24px',
+                fontSize: '15px',
+                fontWeight: '500',
+                boxShadow: '0 20px 40px rgba(16, 185, 129, 0.3), 0 8px 16px rgba(16, 185, 129, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+              },
+            },
+            error: {
+              style: {
+                background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                color: '#fff',
+                borderRadius: '20px',
+                padding: '20px 24px',
+                fontSize: '15px',
+                fontWeight: '500',
+                boxShadow: '0 20px 40px rgba(239, 68, 68, 0.3), 0 8px 16px rgba(239, 68, 68, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+              },
             },
           }}
         />
@@ -103,8 +143,43 @@ function AppContent() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#363636',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: '#fff',
+            borderRadius: '20px',
+            padding: '20px 24px',
+            fontSize: '15px',
+            fontWeight: '500',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)',
+            minWidth: '300px',
+            maxWidth: '400px',
+          },
+          success: {
+            style: {
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              color: '#fff',
+              borderRadius: '20px',
+              padding: '20px 24px',
+              fontSize: '15px',
+              fontWeight: '500',
+              boxShadow: '0 20px 40px rgba(16, 185, 129, 0.3), 0 8px 16px rgba(16, 185, 129, 0.2)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)',
+            },
+          },
+          error: {
+            style: {
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              color: '#fff',
+              borderRadius: '20px',
+              padding: '20px 24px',
+              fontSize: '15px',
+              fontWeight: '500',
+              boxShadow: '0 20px 40px rgba(239, 68, 68, 0.3), 0 8px 16px rgba(239, 68, 68, 0.2)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              backdropFilter: 'blur(10px)',
+            },
           },
         }}
       />
@@ -136,6 +211,15 @@ function AppContent() {
               aria-label="Toggle Dark Mode"
             >
               {darkMode ? "☀️" : "🌙"}
+            </button>
+
+            <button
+              onClick={logout}
+              className="group relative rounded-full p-2 sm:p-2.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 text-white text-lg sm:text-xl"
+              aria-label="Logout"
+              title="Logout"
+            >
+              ⏻
             </button>
 
             <button
@@ -239,155 +323,17 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        {/* More individual tool routes */}
-        <Route path="/tools/reduce-size-kb" element={
+        {/* Dynamic route for all tools - this will catch any /tools/* path */}
+        <Route path="/tools/*" element={
           <ProtectedRoute>
             <GenericToolPage />
           </ProtectedRoute>
         } />
-        <Route path="/tools/increase-size-kb" element={
+
+        {/* Image Tools */}
+        <Route path="/image-tools" element={
           <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/remove-background" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/convert-dpi" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/pdf-to-jpg" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/image-to-pdf" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/circle-crop" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/grayscale" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/watermark" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/resize-cm" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/resize-mm" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/resize-inches" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/webp-to-jpg" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/jpeg-to-png" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/png-to-jpeg" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/jpg-to-text" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-5kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-10kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-15kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-20kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-25kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-30kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-40kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-100kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-150kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-200kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-300kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-500kb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-1mb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-2mb" element={
-          <ProtectedRoute>
-            <GenericToolPage />
+            <ImageTools />
           </ProtectedRoute>
         } />
 

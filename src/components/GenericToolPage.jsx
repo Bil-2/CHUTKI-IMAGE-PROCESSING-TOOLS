@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import { toolsConfig } from "../toolsConfig";
 
 const GenericToolPage = () => {
-  const { toolName } = useParams();
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -12,12 +11,14 @@ const GenericToolPage = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({});
+  const [customFilename, setCustomFilename] = useState('');
   const fileInputRef = useRef(null);
 
-  // Find the tool configuration
+  // Get current path and find the tool configuration
+  const currentPath = window.location.pathname;
   const tool = Object.values(toolsConfig)
     .flat()
-    .find(t => t.route === `/tools/${toolName}`);
+    .find(t => t.route === currentPath);
 
   if (!tool) {
     return (
@@ -75,7 +76,6 @@ const GenericToolPage = () => {
         ...prev,
         [field]: value
       };
-      console.log(`Updated ${field}:`, value); // Debug log
       return newData;
     });
   };
@@ -102,7 +102,11 @@ const GenericToolPage = () => {
         }
       });
 
-      console.log("Sending form data:", Object.fromEntries(formDataToSend.entries()));
+      // Add custom filename if provided
+      if (customFilename.trim()) {
+        formDataToSend.append('customFilename', customFilename.trim());
+      }
+
 
       const response = await fetch(tool.endpoint, {
         method: tool.method,
@@ -120,7 +124,13 @@ const GenericToolPage = () => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `processed-${Date.now()}.pdf`;
+
+          // Use custom filename if provided, otherwise use default
+          const defaultName = `processed-${Date.now()}.pdf`;
+          const finalFilename = customFilename.trim() ?
+            `${customFilename.trim()}.pdf` : defaultName;
+          a.download = finalFilename;
+
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -132,7 +142,13 @@ const GenericToolPage = () => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `processed-${Date.now()}.jpg`;
+
+          // Use custom filename if provided, otherwise use default
+          const defaultName = `processed-${Date.now()}.jpg`;
+          const finalFilename = customFilename.trim() ?
+            `${customFilename.trim()}.jpg` : defaultName;
+          a.download = finalFilename;
+
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -269,14 +285,14 @@ const GenericToolPage = () => {
   }, [tool]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 dark:from-gray-900 dark:to-gray-800 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-4">
             {tool.name}
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
             {tool.description}
           </p>
         </div>
@@ -286,7 +302,7 @@ const GenericToolPage = () => {
           <div className="space-y-6">
             {/* File Upload Area */}
             <div
-              className="border-2 border-dashed border-purple-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors cursor-pointer bg-white"
+              className="border-2 border-dashed border-purple-300 dark:border-purple-600 rounded-lg p-8 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors cursor-pointer bg-white dark:bg-gray-800"
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -302,10 +318,10 @@ const GenericToolPage = () => {
               {!preview ? (
                 <div>
                   <div className="text-6xl mb-4">📷</div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
                     Select Or Drag & Drop Image Here
                   </h3>
-                  <p className="text-gray-500 mb-4">
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
                     Supports JPG, PNG, WEBP, HEIC formats
                   </p>
                   <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
@@ -335,9 +351,9 @@ const GenericToolPage = () => {
 
             {/* Preview Section */}
             {preview && (
-              <div className="bg-white rounded-lg p-6 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Image Preview</h3>
-                <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Image Preview</h3>
+                <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                   <span>File: {selectedFile?.name}</span>
                   <span>Size: {(selectedFile?.size / 1024).toFixed(1)} KB</span>
                 </div>
@@ -346,14 +362,14 @@ const GenericToolPage = () => {
 
             {/* Results */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{error}</p>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-300">{error}</p>
               </div>
             )}
 
             {result && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">{result}</p>
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <p className="text-green-800 dark:text-green-300">{result}</p>
               </div>
             )}
           </div>
@@ -362,18 +378,37 @@ const GenericToolPage = () => {
           <div className="space-y-6">
             {/* Settings Panel */}
             {tool.fields && tool.fields.length > 0 && (
-              <div className="bg-white rounded-lg p-6 shadow-lg">
-                <h3 className="text-lg font-semibold mb-4">Tool Settings</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Tool Settings</h3>
                 <div className="space-y-4">
-                  {console.log("Tool fields:", tool.fields)}
-                  {console.log("Form data:", formData)}
                   {tool.fields.map(field => {
-                    console.log(`Rendering field: ${field}`);
                     return renderFormField(field);
                   })}
                 </div>
               </div>
             )}
+
+            {/* Custom Filename Panel */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Output Settings</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Custom Filename (optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter custom filename (without extension)"
+                    value={customFilename}
+                    onChange={(e) => setCustomFilename(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty to use auto-generated filename
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Generate Button */}
             <motion.button

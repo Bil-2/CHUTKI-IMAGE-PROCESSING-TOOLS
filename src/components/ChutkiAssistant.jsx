@@ -287,7 +287,7 @@ const ChutkiAssistant = ({ onSelect }) => {
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
-            className="bg-white shadow-xl rounded-2xl w-full max-w-[90vw] sm:w-80 sm:max-w-sm p-4 max-h-[85vh] flex flex-col"
+            className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl w-full max-w-[90vw] sm:w-80 sm:max-w-sm p-4 max-h-[85vh] flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
@@ -295,14 +295,14 @@ const ChutkiAssistant = ({ onSelect }) => {
                 <span className="text-pink-500 text-xl">👱🏼‍♀️</span>
                 <p className="font-bold text-pink-600">CHUTKI</p>
               </div>
-              <button onClick={() => setOpen(false)} className="p-1">
+              <button onClick={() => setOpen(false)} className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
                 <FaTimes />
               </button>
             </div>
 
             {/* Greeting */}
-            <div className="text-xs sm:text-sm text-gray-600 mb-1 font-medium">{time}</div>
-            <p className="text-xs sm:text-sm text-gray-600 mb-2">
+            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 font-medium">{time}</div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
               <Typewriter
                 words={[
                   "Hi! I'm Chutki 😊",
@@ -329,13 +329,13 @@ const ChutkiAssistant = ({ onSelect }) => {
 
             {/* Input Box */}
             <div className="mt-2 w-full flex-shrink-0">
-              <div className="bg-gray-800 rounded-full px-3 sm:px-4 py-1 sm:py-2 shadow-lg flex items-center space-x-2 relative">
+              <div className="bg-gray-800 dark:bg-gray-700 rounded-full px-3 sm:px-4 py-1 sm:py-2 shadow-lg flex items-center space-x-2 relative">
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Write something..."
                   rows={1}
-                  className="flex-1 text-xs sm:text-sm bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none min-h-[2rem] pt-1"
+                  className="flex-1 text-xs sm:text-sm bg-transparent text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 resize-none focus:outline-none min-h-[2rem] pt-1"
                 />
 
                 {showEmojiPicker && (
@@ -351,19 +351,19 @@ const ChutkiAssistant = ({ onSelect }) => {
 
                 <div className="flex items-center space-x-2">
                   <button
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-gray-100"
                     onClick={() => setShowEmojiPicker((prev) => !prev)}
                   >
                     <FaSmile size={16} />
                   </button>
                   <button
-                    className={isListening ? "text-pink-500 animate-pulse" : "text-gray-400"}
+                    className={isListening ? "text-pink-500 animate-pulse" : "text-gray-400 dark:text-gray-300"}
                     onClick={startListening}
                   >
                     <FaMicrophone size={16} />
                   </button>
                   <button
-                    className="text-pink-400 hover:text-white"
+                    className="text-pink-400 dark:text-pink-300 hover:text-white dark:hover:text-gray-100"
                     onClick={sendNote}
                   >
                     <FaPaperPlane size={16} />
@@ -380,34 +380,34 @@ const ChutkiAssistant = ({ onSelect }) => {
                   onClick={() => handleAction(action.value)}
                   disabled={loading}
                   className={`w-full text-left p-3 rounded-lg transition-all ${loading
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-pink-100 hover:bg-pink-200 text-gray-800 hover:shadow-md'
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                    : 'bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-900/50 text-gray-800 dark:text-gray-200 hover:shadow-md'
                     }`}
                 >
                   <div className="font-medium text-sm">{action.label}</div>
-                  <div className="text-xs text-gray-600 mt-1">{action.description}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{action.description}</div>
                 </button>
               ))}
             </div>
 
             {/* Loading and Result */}
             {loading && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-blue-800">Processing...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                  <span className="text-sm text-blue-800 dark:text-blue-200">Processing...</span>
                 </div>
               </div>
             )}
 
             {result && !loading && (
-              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="text-sm text-green-800">
+              <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg">
+                <div className="text-sm text-green-800 dark:text-green-200">
                   {result.length > 100 ? result.substring(0, 100) + '...' : result}
                 </div>
                 <button
                   onClick={() => setResult(null)}
-                  className="text-xs text-green-600 hover:text-green-800 mt-1"
+                  className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 mt-1"
                 >
                   Clear result
                 </button>
@@ -423,6 +423,7 @@ const ChutkiAssistant = ({ onSelect }) => {
             exit={{ opacity: 0 }}
             onClick={() => setOpen(true)}
             className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500
+                       dark:from-pink-400 dark:via-fuchsia-400 dark:to-purple-400
                        text-white p-3 sm:p-4 rounded-full shadow-lg text-xl sm:text-3xl
                        transition-transform duration-300 ease-out hover:scale-105"
             style={{

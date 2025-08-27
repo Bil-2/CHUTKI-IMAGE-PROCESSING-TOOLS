@@ -48,7 +48,7 @@ if (warnings.length > 0) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -251,40 +251,7 @@ app.get("/api/health", (req, res) => {
   res.status(200).json(successResponse('Service healthy', healthData));
 });
 
-// Google OAuth routes - only if Google OAuth is configured
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  console.log("✅ Google OAuth routes initialized");
-
-  app.get("/api/auth/google", passport.authenticate("google", {
-    scope: ["profile", "email"]
-  }));
-
-  app.get("/api/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login" }),
-    (req, res) => {
-      const token = jwt.sign(
-        { id: req.user._id },
-        process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '7d' }
-      );
-
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-      res.redirect(`${clientUrl}/oauth-success?token=${token}`);
-    }
-  );
-} else {
-  console.log("⚠️  Google OAuth not configured - missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET");
-
-  app.get("/api/auth/google", (req, res) => {
-    res.status(503).json(errorResponse(res,
-      "Google OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables."
-    ));
-  });
-
-  app.get("/api/auth/google/callback", (req, res) => {
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_not_configured`);
-  });
-}
+// Google OAuth routes are handled in routes/auth.js
 
 // ... rest of your code ...
 

@@ -695,6 +695,15 @@ export const getToolCount = () => {
   return getAllTools().length;
 };
 
+// Helper function to get tool by route
+export const getToolByRoute = (route) => {
+  for (const category of Object.values(toolsConfig)) {
+    const tool = category.find(t => t.route === route);
+    if (tool) return tool;
+  }
+  return null;
+};
+
 // Helper function to get tools by category
 export const getToolsByCategory = (category) => {
   return toolsConfig[category] || [];

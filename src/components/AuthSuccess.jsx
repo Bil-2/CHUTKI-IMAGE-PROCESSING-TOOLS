@@ -1,11 +1,9 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 
 const AuthSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useContext(AuthContext);
 
   useEffect(() => {
     const handleAuthSuccess = async () => {
@@ -20,7 +18,7 @@ const AuthSuccess = () => {
         }
 
         // Verify token and get user data
-        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/verify`, {
+        const response = await fetch(`http://localhost:5001/api/auth/verify`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -33,11 +31,8 @@ const AuthSuccess = () => {
           localStorage.setItem('token', token);
           localStorage.setItem('user', JSON.stringify(data.user));
 
-          // Update auth context
-          login(data.user, token);
-
-          // Navigate to dashboard
-          navigate('/dashboard');
+          // Force a page reload to ensure AuthContext picks up the new auth state
+          window.location.href = '/';
         } else {
           navigate('/login?error=invalid_token');
         }
@@ -48,7 +43,7 @@ const AuthSuccess = () => {
     };
 
     handleAuthSuccess();
-  }, [location, navigate, login]);
+  }, [location, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
