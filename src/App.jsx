@@ -128,7 +128,7 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/auth/success" element={<AuthSuccess />} />
+          <Route path="/auth-success" element={<AuthSuccess />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>
@@ -191,12 +191,8 @@ function AppContent() {
         <div className="relative max-w-6xl mx-auto flex justify-between items-center px-3 sm:px-4 py-3 sm:py-4">
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-white/20 backdrop-blur-lg p-1.5 sm:p-2 rounded-full border border-white/20 animate-logo-glow">
-              <img
-                src="https://img.icons8.com/fluency/96/bot.png"
-                alt="Chutki Assistant"
-                className="w-8 h-8 sm:w-10 sm:h-10"
-              />
+            <div className="bg-white/20 backdrop-blur-lg p-1.5 sm:p-2 rounded-full border border-white/20 animate-logo-glow hover:bg-white/30 transition-all duration-500">
+              <span className="text-6xl sm:text-5xl inline-block animate-pulse hover:animate-none hover:scale-125 hover:rotate-12 transform transition-all duration-500 ease-out cursor-pointer">👱🏼‍♀️</span>
             </div>
             <h1 className="text-base sm:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
               Chutki Image Tools

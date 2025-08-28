@@ -2,6 +2,16 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
+    // Check if MongoDB connection is explicitly requested
+    const shouldConnectMongoDB = process.env.ENABLE_MONGODB === 'true' || process.env.MONGODB_URI;
+
+    if (!shouldConnectMongoDB) {
+      console.log('📝 Running in standalone mode (no database)');
+      console.log('💡 To enable MongoDB: Set ENABLE_MONGODB=true or provide MONGODB_URI');
+      global.DATABASE_CONNECTED = false;
+      return null;
+    }
+
     // MongoDB connection options for production
     const options = {
       useNewUrlParser: true,

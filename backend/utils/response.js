@@ -1,16 +1,16 @@
 // utils/response.js
 
-// Success response
-export const successResponse = (res, data = null, message = "Success", statusCode = 200) => {
-  return res.status(statusCode).json({
+// Success response - Fixed parameter order
+export const successResponse = (message = "Success", data = null, statusCode = 200) => {
+  return {
     success: true,
     message,
     data,
     timestamp: new Date().toISOString(),
-  });
+  };
 };
 
-// Error response
+// Error response - Fixed parameter order  
 export const errorResponse = (res, message = "Error occurred", statusCode = 500, error = null) => {
   const response = {
     success: false,

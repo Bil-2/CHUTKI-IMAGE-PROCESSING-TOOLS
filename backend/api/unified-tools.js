@@ -80,15 +80,14 @@ router.post('/:tool', uploadAny, async (req, res) => {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    try {
-      let processedBuffer;
-      let filename;
-      let contentType = 'image/jpeg';
+    let processedBuffer;
+    let filename;
+    let contentType = 'image/jpeg';
 
-      // Get custom filename from request body
-      const customFilename = req.body.customFilename;
+    // Get custom filename from request body
+    const customFilename = req.body.customFilename;
 
-      switch (tool) {
+    switch (tool) {
         case 'passport-photo': {
           const { size = '2x2', dpi = 300, background = '#FFFFFF' } = req.body;
           const [width, height] = size.includes('x') ? 
@@ -1110,7 +1109,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
           });
 
           console.log('OCR completed successfully');
-          res.json({
+          return res.json({
             text: text.trim(),
             language: lang,
             success: true
@@ -1118,7 +1117,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
         } catch (error) {
           console.error('OCR Error:', error);
-          res.status(500).json({ error: 'Failed to extract text from image: ' + error.message });
+          return res.status(500).json({ error: 'Failed to extract text from image: ' + error.message });
         }
         break;
 
@@ -1140,7 +1139,6 @@ router.post('/:tool', uploadAny, async (req, res) => {
     });
   }
 });
-
 // Add a simple test endpoint
 router.get('/test', (req, res) => {
   res.json({

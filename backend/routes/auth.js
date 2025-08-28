@@ -1,9 +1,10 @@
 import express from 'express';
 import passport from 'passport';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 import {
   register,
   login,
-  googleCallback,
   getProfile,
   updateProfile,
   logout,
@@ -16,7 +17,7 @@ const requireDatabase = (req, res, next) => {
   if (!global.DATABASE_CONNECTED) {
     return res.status(503).json({
       success: false,
-      message: 'Database not available. Authentication features are disabled.',
+      message: 'Database not available',
       error: 'DATABASE_UNAVAILABLE'
     });
   }
@@ -29,58 +30,115 @@ const router = express.Router();
 router.post('/register', requireDatabase, register);
 router.post('/login', requireDatabase, login);
 router.post('/logout', requireDatabase, logout);
+
+// Token verification endpoint
+router.get('/verify-token', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+        error: 'NO_TOKEN_PROVIDED'
+      });
+    }
+
+    const token = authHeader.substring(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get user from database
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        error: 'USER_NOT_FOUND'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Token verified',
+      user
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid token',
+      error: 'INVALID_TOKEN'
+    });
+  }
+});
+
 router.get('/verify', requireDatabase, verifyToken);
 
 // Protected routes
 router.get('/profile', requireDatabase, protect, getProfile);
 router.put('/profile', requireDatabase, protect, updateProfile);
 
-// Google OAuth routes - Check if strategy exists
-const hasGoogleStrategy = passport._strategies && passport._strategies.google;
+// Google OAuth routes - Check credentials and database connection
+const hasGoogleCredentials = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+const databaseConnected = global.DATABASE_CONNECTED !== false;
 
-if (hasGoogleStrategy || (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here' && process.env.GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com'))) {
-  router.get('/google', (req, res, next) => {
-    // Check if Google strategy is available at runtime
-    if (!passport._strategies || !passport._strategies.google) {
-      return res.status(503).json({
-        success: false,
-        message: 'Google OAuth strategy not initialized',
-        error: 'OAUTH_STRATEGY_NOT_FOUND'
-      });
-    }
-    
-    passport.authenticate('google', {
-      scope: ['profile', 'email']
-    })(req, res, next);
-  });
+if (hasGoogleCredentials && databaseConnected) {
+  // Google OAuth initiation
+  router.get('/google', passport.authenticate('google', {
+    scope: ['profile', 'email']
+  }));
 
-  router.get('/google/callback', (req, res, next) => {
-    // Check if Google strategy is available at runtime
-    if (!passport._strategies || !passport._strategies.google) {
-      return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_strategy_missing`);
+  // Google OAuth callback handler
+  const googleCallback = async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: req.user._id,
+          email: req.user.email,
+          provider: req.user.provider
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      // Redirect to success page with token
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`);
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
     }
-    
-    passport.authenticate('google', {
-      failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_failed`,
-      session: false
-    })(req, res, next);
-  }, googleCallback);
-  
-  console.log('✅ Google OAuth routes initialized with runtime strategy check');
+  };
+
+  router.get('/google/callback', passport.authenticate('google', {
+    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
+    session: false
+  }), googleCallback);
+
+  console.log('✅ Google OAuth routes initialized successfully');
 } else {
-  // Fallback routes for when Google OAuth is disabled
+  // Fallback routes for when Google OAuth is disabled or database unavailable
   router.get('/google', (req, res) => {
+    const reason = !databaseConnected ? 'Database not available' : 'Google OAuth is not configured';
+    const error = !databaseConnected ? 'DATABASE_UNAVAILABLE' : 'OAUTH_DISABLED';
+
     res.status(503).json({
       success: false,
-      message: 'Google OAuth is not configured',
-      error: 'OAUTH_DISABLED'
+      message: reason,
+      error: error
     });
   });
 
   router.get('/google/callback', (req, res) => {
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_disabled`);
+    const errorParam = !databaseConnected ? 'database_unavailable' : 'oauth_disabled';
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=${errorParam}`);
   });
-  console.log('⚠️  Google OAuth routes disabled - using fallback handlers');
+
+  const reason = !databaseConnected ? 'database unavailable' : 'OAuth not configured';
+  console.log(`📝 Google OAuth routes disabled - ${reason}`);
 }
 
 export default router;

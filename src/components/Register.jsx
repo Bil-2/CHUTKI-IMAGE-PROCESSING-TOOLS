@@ -98,9 +98,7 @@ const Register = () => {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="mx-auto h-20 w-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mb-6"
           >
-            <svg className="h-10 w-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-            </svg>
+            <span className="text-6xl">👱🏼‍♀️</span>
           </motion.div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Create your CHUTKI account

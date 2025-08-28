@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import config from '../config';
 
 const AuthSuccess = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const AuthSuccess = () => {
         }
 
         // Verify token and get user data
-        const response = await fetch(`http://localhost:5001/api/auth/verify`, {
+        const response = await fetch(`${config.API_BASE_URL}/api/auth/verify-token`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -31,8 +32,17 @@ const AuthSuccess = () => {
           localStorage.setItem('token', token);
           localStorage.setItem('user', JSON.stringify(data.user));
 
-          // Force a page reload to ensure AuthContext picks up the new auth state
-          window.location.href = '/';
+          // Trigger storage event to update AuthContext
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'token',
+            newValue: token,
+            storageArea: localStorage
+          }));
+
+          // Small delay to ensure context updates, then navigate
+          setTimeout(() => {
+            navigate('/', { replace: true });
+          }, 100);
         } else {
           navigate('/login?error=invalid_token');
         }

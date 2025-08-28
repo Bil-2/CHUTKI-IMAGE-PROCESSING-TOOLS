@@ -1,63 +1,108 @@
-import React, { useState, useEffect, useRef } from "react";
-import { FaTimes, FaMicrophone, FaSmile, FaPaperPlane, FaUpload } from "react-icons/fa";
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { FaTimes, FaMicrophone, FaPaperPlane, FaUpload, FaCopy, FaTrash, FaExpand, FaCompress, FaSpinner } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import { Typewriter } from "react-simple-typewriter";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import EmojiPicker from "emoji-picker-react";
+import config from '../config';
 
-const ChutkiAssistant = ({ onSelect }) => {
-  const [open, setOpen] = useState(false);
+// Lazy load heavy components
+const EmojiPicker = lazy(() => import("emoji-picker-react"));
+
+const ChutkiAssistant = React.memo(() => {
+  // Consolidated UI state
+  const [uiState, setUiState] = useState({
+    open: false,
+    isExpanded: false,
+    isDragOver: false,
+    showEmojiPicker: false,
+    isTyping: false,
+    copiedMessageId: null
+  });
+
+  // Chat state
+  const [chatState, setChatState] = useState({
+    messages: [],
+    note: "",
+    selectedFile: null
+  });
+
   const [time, setTime] = useState("");
-  const [note, setNote] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [currentIntroIndex, setCurrentIntroIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef(null);
-  const [pendingAction, setPendingAction] = useState(null);
-  const [pendingOptions, setPendingOptions] = useState(null);
+  const messagesEndRef = useRef(null);
+  const timeIntervalRef = useRef(null);
+  const introIntervalRef = useRef(null);
 
-  const actions = [
-    {
-      label: "Convert Images To PDF",
-      value: "image-to-pdf",
-      description: "Convert multiple images to a single PDF",
-      endpoint: "/api/tools/image-to-pdf",
-      multiple: true
-    },
-    {
-      label: "Compress Image",
-      value: "compress-image",
-      description: "Compress image to reduce file size",
-      endpoint: "/api/compress-image",
-      multiple: false
-    },
-    {
-      label: "JPG to Text (OCR)",
-      value: "ocr",
-      description: "Extract text from images using OCR",
-      endpoint: "/api/tools/ocr",
-      multiple: false
-    },
-    {
-      label: "Remove Background",
-      value: "remove-background",
-      description: "Remove background from images",
-      endpoint: "/api/remove-background",
-      multiple: false
-    },
-    {
-      label: "Describe Image (AI)",
-      value: "ai-caption",
-      description: "Generate a caption using AI",
-      endpoint: "/api/ai/caption",
-      multiple: false
-    },
-  ];
+  // Welcome message on first load
+  useEffect(() => {
+    if (chatState.messages.length === 0) {
+      const welcomeMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '👋 **Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
+        timestamp: new Date()
+      };
+      setChatState(prev => ({ ...prev, messages: [welcomeMessage] }));
+    }
+  }, [chatState.messages.length]);
+
+  // Optimized drag and drop handlers with useCallback
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setUiState(prev => ({ ...prev, isDragOver: true }));
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setUiState(prev => ({ ...prev, isDragOver: false }));
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setUiState(prev => ({ ...prev, isDragOver: false }));
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const fileNames = Array.from(files).map(f => f.name).join(', ');
+      const fileMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `📁 **Files dropped successfully!**\n\n**${files.length} file(s):** ${fileNames}\n\nWhat processing would you like me to perform?`,
+        timestamp: new Date()
+      };
+      setChatState(prev => ({
+        ...prev,
+        selectedFile: files,
+        messages: [...prev.messages, fileMessage]
+      }));
+    }
+  }, []);
+
+  // Optimized copy message function
+  const copyMessage = useCallback((content) => {
+    navigator.clipboard.writeText(content);
+    const copyId = Date.now();
+    setUiState(prev => ({ ...prev, copiedMessageId: copyId }));
+    setTimeout(() => {
+      setUiState(prev => ({ ...prev, copiedMessageId: null }));
+    }, 2000);
+  }, []);
+
+  // Optimized clear chat function
+  const clearChat = useCallback(() => {
+    const welcomeMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: '🧹 **Chat cleared!** How can I help you with image processing today?',
+      timestamp: new Date()
+    };
+    setChatState(prev => ({ ...prev, messages: [welcomeMessage] }));
+  }, []);
 
   const { transcript, resetTranscript, listening: isListening } = useSpeechRecognition();
 
-  // Time & Greeting
+  // Optimized time & greeting with proper cleanup
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -78,246 +123,324 @@ const ChutkiAssistant = ({ onSelect }) => {
     };
 
     updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
+    timeIntervalRef.current = setInterval(updateTime, 1000);
+
+    return () => {
+      if (timeIntervalRef.current) {
+        clearInterval(timeIntervalRef.current);
+      }
+    };
   }, []);
 
-  // Voice Commands
+  // Optimized typewriter effect with smoother performance
   useEffect(() => {
-    if (!isListening && transcript) {
-      const lower = transcript.toLowerCase();
-      if (lower.includes("resize")) handleAction("resize");
-      else if (lower.includes("compress")) handleAction("compress-image");
-      else if (lower.includes("background")) handleAction("remove-background");
-      else if (lower.includes("text") || lower.includes("ocr")) handleAction("ocr");
-      else if (lower.includes("convert") || lower.includes("pdf")) handleAction("image-to-pdf");
-      resetTranscript();
-    }
-  }, [isListening, transcript]);
+    const introMessages = [
+      "Hello! 👋",
+      "I'm Chutki Assistant 🌸",
+      "How can I help you today ?",
+      "ChatGPT Powered Assistant"
+    ];
 
-  const handleFileSelect = (event) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setSelectedFile(files);
-      // If the user clicked an action first, auto-run it after files are chosen
-      if (pendingAction) {
-        const action = actions.find((a) => a.value === pendingAction);
-        if (action) {
-          // Small delay to ensure state updates settle
-          setTimeout(() => {
-            processAction(action, pendingOptions || {});
-          }, 0);
+    let animationId;
+    let lastTime = 0;
+    const typingSpeed = 120; // Natural typing speed
+    const deletingSpeed = 80; // Moderate deleting speed
+    const pauseDuration = 2100; // Comfortable reading pause
+
+    const animate = (currentTime) => {
+      const currentMessage = introMessages[currentIntroIndex];
+
+      if (currentTime - lastTime >= (isDeleting ? deletingSpeed : typingSpeed)) {
+        if (isTyping && !isDeleting) {
+          // Typing phase
+          if (displayedText.length < currentMessage.length) {
+            setDisplayedText(prev => currentMessage.slice(0, prev.length + 1));
+          } else {
+            // Finished typing, start pause
+            setIsTyping(false);
+            setTimeout(() => setIsDeleting(true), pauseDuration);
+          }
+        } else if (isDeleting) {
+          // Deleting phase
+          if (displayedText.length > 0) {
+            setDisplayedText(prev => prev.slice(0, -1));
+          } else {
+            // Finished deleting, move to next
+            setIsDeleting(false);
+            setIsTyping(true);
+            setCurrentIntroIndex(prev => (prev + 1) % introMessages.length);
+          }
         }
-        setPendingAction(null);
-        setPendingOptions(null);
+        lastTime = currentTime;
       }
-    }
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    };
+  }, [currentIntroIndex, displayedText, isTyping, isDeleting]);
+
+  // Get current displayed text for typewriter effect
+  const getCurrentIntroMessage = () => {
+    return displayedText;
   };
 
-  const handleAction = async (value, options = {}) => {
-    const action = actions.find((a) => a.value === value);
-    if (!action) return;
+  const sendChatMessage = useCallback(async (message) => {
+    if (!message.trim()) return;
 
-    // If no file is selected, trigger file selection
-    if (!selectedFile) {
-      setPendingAction(value);
-      setPendingOptions(options || {});
-      fileInputRef.current?.click();
-      return;
-    }
-
-    await processAction(action, options);
-  };
-
-  const inferActionFromText = (text) => {
-    const t = text.toLowerCase();
-    if (/(remove\s*bg|remove\s*background|background\s*remove)/.test(t)) return "remove-background";
-    if (/(ocr|text|extract\s*text|read\s*text)/.test(t)) return "ocr";
-    if (/(pdf|to\s*pdf|make\s*pdf|convert\s*pdf)/.test(t)) return "image-to-pdf";
-    if (/(describe|caption|alt\s*text|what\s*is\s*in\s*this)/.test(t)) return "ai-caption";
-    if (/(compress|reduce|smaller|kb|size)/.test(t)) return "compress-image";
-    return null;
-  };
-
-  const inferOptionsFromText = (text) => {
-    const options = {};
-    const t = text.toLowerCase();
-    // max size in kb, e.g., 100kb or 150 kb
-    const kbMatch = t.match(/(\d{2,4})\s*kb/);
-    if (kbMatch) {
-      options.maxSize = Number(kbMatch[1]);
-    }
-    // quality 0-100
-    const qualityMatch = t.match(/quality\s*(\d{1,3})/);
-    if (qualityMatch) {
-      options.quality = Math.min(100, Math.max(1, Number(qualityMatch[1])));
-    }
-    // format
-    if (/\b(webp)\b/.test(t)) options.format = 'webp';
-    else if (/\b(png)\b/.test(t)) options.format = 'png';
-    else if (/\b(jpe?g)\b/.test(t)) options.format = 'jpg';
-    // language for OCR
-    const langMatch = t.match(/lang\s*:\s*([a-z]{3,5})/);
-    if (langMatch) {
-      options.lang = langMatch[1];
-    }
-    // prompt for AI caption
-    const promptMatch = text.match(/(?:prompt|say|describe)[:\-]?\s*(.+)$/i);
-    if (promptMatch) {
-      options.prompt = promptMatch[1].trim();
-    }
-    return options;
-  };
-
-  const handleNoteCommand = async () => {
-    if (!note.trim()) return;
-    const trimmed = note.trim();
-    const actionValue = inferActionFromText(trimmed);
-    if (!actionValue) {
-      setResult("I couldn't understand. Try: 'make pdf', 'compress', 'remove background', or 'extract text'.");
-      return;
-    }
-    const options = inferOptionsFromText(trimmed);
-    await handleAction(actionValue, options);
-  };
-
-  const processAction = async (action, options = {}) => {
-    if (!selectedFile || selectedFile.length === 0) {
-      // Instead of alert, trigger file selection
-      setPendingAction(action.value);
-      setPendingOptions(options || {});
-      fileInputRef.current?.click();
-      return;
-    }
-
-    setLoading(true);
-    setResult(null);
+    const userMessage = {
+      id: Date.now(),
+      role: 'user',
+      content: message,
+      timestamp: new Date()
+    };
+    setChatState(prev => ({ ...prev, messages: [...prev.messages, userMessage], note: '' }));
+    setUiState(prev => ({ ...prev, isTyping: true }));
 
     try {
-      const formData = new FormData();
-
-      if (action.multiple) {
-        // For multiple files (like image-to-pdf)
-        Array.from(selectedFile).forEach((file, index) => {
-          formData.append(`images`, file);
-        });
-      } else {
-        // For single file
-        formData.append('image', selectedFile[0]);
+      // Include file information if files are selected
+      let contextMessage = message;
+      if (chatState.selectedFile && chatState.selectedFile.length > 0) {
+        const fileInfo = Array.from(chatState.selectedFile).map(f => `${f.name} (${f.type}, ${(f.size / 1024).toFixed(1)}KB)`).join(', ');
+        contextMessage += `\n\n[User has uploaded ${chatState.selectedFile.length} files: ${fileInfo}]`;
       }
 
-      // Add additional parameters based on action
-      if (action.value === 'compress-image') {
-        const quality = options.quality ?? 80;
-        const maxSize = options.maxSize ?? 100;
-        const format = options.format ?? 'jpg';
-        formData.append('quality', String(quality));
-        formData.append('maxSize', String(maxSize));
-        formData.append('format', String(format));
-      } else if (action.value === 'ocr') {
-        formData.append('lang', options.lang || 'eng');
-      } else if (action.value === 'ai-caption') {
-        if (options.prompt) formData.append('prompt', options.prompt);
-      }
-
-      const response = await fetch(action.endpoint, {
+      const response = await fetch(`${config.API_BASE_URL}/api/chatgpt/chat`, {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: contextMessage,
+          conversationHistory: chatState.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+        })
       });
 
       if (response.ok) {
-        if (action.value === 'ocr' || action.value === 'ai-caption') {
-          // JSON result
-          const data = await response.json();
-          setResult(data.text || data.caption || '');
-        } else {
-          // Other actions return files for download
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `chutki-${action.value}.${action.value === 'image-to-pdf' ? 'pdf' : 'jpg'}`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          setResult("File downloaded successfully!");
-        }
+        const data = await response.json();
+        const aiMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date()
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, aiMessage] }));
       } else {
-        const error = await response.json();
-        setResult(`Error: ${error.error || 'Failed to process'}`);
+        const errorData = await response.json();
+        const errorMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: `❌ **Error:** ${errorData.error}\n\nPlease check your OpenAI API key configuration.`,
+          timestamp: new Date()
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage] }));
       }
     } catch (error) {
-      console.error('Error:', error);
-      setResult(`Error: ${error.message || 'Failed to process'}`);
+      console.error('Chat error:', error);
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '🔌 **Connection Error**\n\nI\'m having trouble connecting. Please check your internet connection and try again.',
+        timestamp: new Date()
+      };
+      setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage] }));
     } finally {
-      setLoading(false);
+      setUiState(prev => ({ ...prev, isTyping: false }));
     }
-  };
+  }, [chatState.selectedFile, chatState.messages]);
 
-  const startListening = () => {
-    SpeechRecognition.startListening({ continuous: false });
-  };
+  // Voice Commands - send to AI chat
+  useEffect(() => {
+    if (!isListening && transcript) {
+      sendChatMessage(transcript);
+      resetTranscript();
+    }
+  }, [isListening, transcript, sendChatMessage, resetTranscript]);
 
-  const sendNote = () => {
-    if (!note.trim()) return;
+  const handleFileSelect = useCallback((event) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const fileNames = Array.from(files).map(f => f.name).join(', ');
+      const fileMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `📁 **Files uploaded successfully!**\n\n**${files.length} file(s):** ${fileNames}\n\n🎯 **What would you like me to do?**\n• Compress to specific size\n• Resize dimensions\n• Convert format\n• Extract text (OCR)\n• Remove background\n• Create PDF\n• Generate passport photos\n\nJust tell me your requirements!`,
+        timestamp: new Date()
+      };
+      setChatState(prev => ({
+        ...prev,
+        selectedFile: files,
+        messages: [...prev.messages, fileMessage]
+      }));
+    }
+  }, []);
+
+  // Remove handleAction - everything goes through AI chat now
+
+  // Remove inferActionFromText - AI will handle intent detection
+
+  // Remove inferOptionsFromText - AI will handle parameter extraction
+
+  const handleNoteCommand = useCallback(async () => {
+    if (!chatState.note.trim()) return;
+    await sendChatMessage(chatState.note.trim());
+  }, [chatState.note, sendChatMessage]);
+
+  const toggleListening = useCallback(() => {
+    if (SpeechRecognition.browserSupportsSpeechRecognition()) {
+      if (isListening) {
+        SpeechRecognition.stopListening();
+      } else {
+        SpeechRecognition.startListening();
+      }
+    }
+  }, [isListening]);
+
+  const sendNote = useCallback(() => {
+    if (!chatState.note.trim()) return;
     handleNoteCommand();
-    setNote("");
-  };
+    setChatState(prev => ({ ...prev, note: "" }));
+  }, [chatState.note, handleNoteCommand]);
 
-  const onEmojiClick = (emojiData) => {
-    setNote((prev) => prev + emojiData.emoji);
-    setShowEmojiPicker(false);
-  };
+  const onEmojiClick = useCallback((emojiData) => {
+    setChatState(prev => ({ ...prev, note: prev.note + emojiData.emoji }));
+    setUiState(prev => ({ ...prev, showEmojiPicker: false }));
+  }, []);
 
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setResult(null);
+  const clearSelection = useCallback(() => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+    const clearMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: '🗑️ **Files cleared!** Ready for new uploads.',
+      timestamp: new Date()
+    };
+    setChatState(prev => ({
+      ...prev,
+      selectedFile: null,
+      messages: [...prev.messages, clearMessage]
+    }));
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatState.messages, scrollToBottom]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <AnimatePresence>
-        {open ? (
+        {uiState.open ? (
           <motion.div
             key="chatbox"
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            className="bg-white dark:bg-gray-800 shadow-xl rounded-2xl w-full max-w-[90vw] sm:w-80 sm:max-w-sm p-4 max-h-[85vh] flex flex-col"
+            initial={{ opacity: 0, scale: 0.85, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 20 }}
+            className={`bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl rounded-3xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm ${uiState.isExpanded
+              ? 'fixed inset-4 w-auto h-auto max-w-none max-h-none'
+              : 'w-full max-w-[90vw] sm:w-80 sm:max-w-sm max-h-[70vh]'
+              } p-0 flex flex-col overflow-hidden`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <span className="text-pink-500 text-xl">👱🏼‍♀️</span>
-                <p className="font-bold text-pink-600">CHUTKI</p>
+            {/* Modern Header */}
+            <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-4 rounded-t-3xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                    <span className="text-white text-xl">👱🏼‍♀️</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-lg">CHUTKI AI</h3>
+                    <div className="relative h-5 overflow-hidden">
+                      {/* Typewriter text with cursor */}
+                      <div className="flex items-center">
+                        <p className="text-white text-xs font-medium bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
+                          {getCurrentIntroMessage()}
+                        </p>
+                        {/* Blinking cursor */}
+                        <span className={`ml-0.5 w-0.5 h-3 bg-white inline-block ${isTyping || isDeleting ? 'animate-pulse' : 'animate-ping'
+                          }`}></span>
+                      </div>
+
+                      {/* Optimized sparkles with reduced animations */}
+                      <div className={`absolute -top-1 -right-2 w-1 h-1 bg-yellow-300 rounded-full transition-opacity duration-300 ${!isTyping && !isDeleting && displayedText.length > 0 ? 'opacity-100' : 'opacity-0'
+                        }`}></div>
+
+                      {/* Minimal glow effect */}
+                      <div className={`absolute inset-0 bg-gradient-to-r from-pink-400/10 via-purple-400/5 to-blue-400/10 rounded-md transition-opacity duration-300 ${displayedText.length > 0 ? 'opacity-100' : 'opacity-0'
+                        }`}></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setUiState(prev => ({ ...prev, isExpanded: !prev.isExpanded }))}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
+                    title={uiState.isExpanded ? 'Minimize' : 'Expand'}
+                  >
+                    {uiState.isExpanded ? <FaCompress size={14} /> : <FaExpand size={14} />}
+                  </button>
+                  <button
+                    onClick={clearChat}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
+                    title="Clear Chat"
+                  >
+                    <FaTrash size={14} />
+                  </button>
+                  <button
+                    onClick={() => setUiState(prev => ({ ...prev, open: false }))}
+                    className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-all"
+                  >
+                    <FaTimes size={14} />
+                  </button>
+                </div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-1 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white">
-                <FaTimes />
-              </button>
+
+              {/* Status indicators */}
+              <div className="flex items-center justify-between mt-3 text-white/90 text-xs">
+                <div className="flex items-center space-x-4">
+                  <span>{time}</span>
+                  {chatState.selectedFile && chatState.selectedFile.length > 0 && (
+                    <span className="bg-white/20 px-2 py-1 rounded-full">
+                      📁 {chatState.selectedFile.length} files
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  {uiState.isTyping && (
+                    <span className="bg-white/20 px-2 py-1 rounded-full animate-pulse">
+                      ✨ Thinking...
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Greeting */}
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 font-medium">{time}</div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">
-              <Typewriter
-                words={[
-                  "Hi! I'm Chutki 😊",
-                  "Your AI Assistant",
-                  "May I help you?",
-                ]}
-                loop
-                cursor
-                typeSpeed={50}
-                deleteSpeed={30}
-                delaySpeed={900}
-              />
-            </p>
+            {chatState.selectedFile && chatState.selectedFile.length > 0 && (
+              <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={clearSelection}
+                  className="w-full p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-sm"
+                >
+                  Clear {chatState.selectedFile.length} file(s)
+                </button>
+              </div>
+            )}
 
-            {/* Hidden file input for actions requiring images */}
+            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -327,44 +450,71 @@ const ChutkiAssistant = ({ onSelect }) => {
               className="hidden"
             />
 
-            {/* Input Box */}
-            <div className="mt-2 w-full flex-shrink-0">
-              <div className="bg-gray-800 dark:bg-gray-700 rounded-full px-3 sm:px-4 py-1 sm:py-2 shadow-lg flex items-center space-x-2 relative">
+            {/* Drag overlay */}
+            {uiState.isDragOver && (
+              <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm border-2 border-dashed border-blue-400 rounded-3xl flex items-center justify-center z-50">
+                <div className="text-center text-blue-600 dark:text-blue-400">
+                  <FaUpload size={48} className="mx-auto mb-4 animate-bounce" />
+                  <p className="text-xl font-bold mb-2">Drop your images here!</p>
+                  <p className="text-sm opacity-80">Multiple files supported</p>
+                </div>
+              </div>
+            )}
+
+            {/* Modern Input Box */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600 shadow-sm flex items-end space-x-2 p-2 relative">
                 <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Write something..."
+                  value={chatState.note}
+                  onChange={(e) => setChatState(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="Ask me anything about image processing... "
                   rows={1}
-                  className="flex-1 text-xs sm:text-sm bg-transparent text-white dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 resize-none focus:outline-none min-h-[2rem] pt-1"
+                  className="flex-1 text-sm bg-transparent text-gray-800 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:outline-none max-h-32 py-2 px-2"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendNote();
+                    }
+                  }}
+                  style={{ minHeight: '40px' }}
                 />
 
-                {showEmojiPicker && (
-                  <div className="absolute bottom-14 sm:bottom-12 right-0 z-50">
-                    <EmojiPicker
-                      onEmojiClick={onEmojiClick}
-                      theme="dark"
-                      height={300}
-                      width={250}
-                    />
+                {uiState.showEmojiPicker && (
+                  <div className="absolute bottom-16 right-0 z-50">
+                    <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        theme="auto"
+                        height={300}
+                        width={280}
+                      />
+                    </Suspense>
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-2">
                   <button
-                    className="text-gray-400 dark:text-gray-300 hover:text-white dark:hover:text-gray-100"
-                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                    className="p-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full transition-colors flex items-center justify-center"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Upload files"
                   >
-                    <FaSmile size={16} />
+                    <FaUpload size={18} />
                   </button>
                   <button
-                    className={isListening ? "text-pink-500 animate-pulse" : "text-gray-400 dark:text-gray-300"}
-                    onClick={startListening}
+                    className={`p-2.5 rounded-full transition-colors ${isListening
+                      ? 'text-red-500 bg-red-50 dark:bg-red-900/30 animate-pulse'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400'
+                      }`}
+                    onClick={toggleListening}
+                    title={isListening ? 'Stop listening' : 'Start voice input'}
                   >
                     <FaMicrophone size={16} />
                   </button>
                   <button
-                    className="text-pink-400 dark:text-pink-300 hover:text-white dark:hover:text-gray-100"
+                    className="p-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full hover:from-pink-600 hover:to-purple-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     onClick={sendNote}
+                    disabled={!chatState.note.trim() || uiState.isTyping}
+                    title="Send message"
                   >
                     <FaPaperPlane size={16} />
                   </button>
@@ -372,70 +522,94 @@ const ChutkiAssistant = ({ onSelect }) => {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="mt-3 space-y-2 overflow-y-auto flex-1">
-              {actions.map((action) => (
-                <button
-                  key={action.value}
-                  onClick={() => handleAction(action.value)}
-                  disabled={loading}
-                  className={`w-full text-left p-3 rounded-lg transition-all ${loading
-                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-900/50 text-gray-800 dark:text-gray-200 hover:shadow-md'
-                    }`}
-                >
-                  <div className="font-medium text-sm">{action.label}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">{action.description}</div>
-                </button>
+            {/* Enhanced Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {chatState.messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}>
+                  <div className={`group relative max-w-[85%] ${msg.role === 'user'
+                    ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-2xl rounded-br-md'
+                    : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-2xl rounded-bl-md shadow-sm'
+                    } p-4`}>
+                    {msg.role === 'assistant' && (
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-7 h-7 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-sm">👱🏼‍♀️</span>
+                        </div>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Chutki AI</span>
+                      </div>
+                    )}
+                    <div className="prose prose-sm max-w-none">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {msg.content.split('**').map((part, i) =>
+                          i % 2 === 0 ? part : <strong key={i} className="font-semibold">{part}</strong>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <div className={`text-xs opacity-70 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => copyMessage(msg.content)}
+                          className={`p-1.5 rounded-full transition-colors flex items-center justify-center ${msg.role === 'user'
+                            ? 'hover:bg-white/20 text-white/80'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-400'
+                            }`}
+                          title="Copy message"
+                        >
+                          <FaCopy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
+
+              {/* Enhanced typing indicator */}
+              {uiState.isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-2xl rounded-bl-md shadow-sm p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <div className="w-7 h-7 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                        <FaSpinner className="text-white text-sm animate-spin" />
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Chutki AI is thinking...</span>
+                    </div>
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Loading and Result */}
-            {loading && (
-              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
-                  <span className="text-sm text-blue-800 dark:text-blue-200">Processing...</span>
-                </div>
-              </div>
-            )}
-
-            {result && !loading && (
-              <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg">
-                <div className="text-sm text-green-800 dark:text-green-200">
-                  {result.length > 100 ? result.substring(0, 100) + '...' : result}
-                </div>
-                <button
-                  onClick={() => setResult(null)}
-                  className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 mt-1"
-                >
-                  Clear result
-                </button>
-              </div>
-            )}
           </motion.div>
         ) : (
-          // Floating Button
           <motion.button
-            key="button"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setOpen(true)}
-            className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-500
-                       dark:from-pink-400 dark:via-fuchsia-400 dark:to-purple-400
-                       text-white p-3 sm:p-4 rounded-full shadow-lg text-xl sm:text-3xl
-                       transition-transform duration-300 ease-out hover:scale-105"
-            style={{
-              boxShadow: "0 4px 15px rgba(236, 72, 153, 0.6)",
-            }}
+            key="fab"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setUiState(prev => ({ ...prev, open: true }))}
+            className="w-16 h-16 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center group"
           >
-            👱🏼‍♀️
+            <div className="relative">
+              <span className="text-white text-3xl">👱🏼‍♀️</span>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            </div>
           </motion.button>
         )}
       </AnimatePresence>
     </div>
   );
-};
+});
 
 export default ChutkiAssistant;

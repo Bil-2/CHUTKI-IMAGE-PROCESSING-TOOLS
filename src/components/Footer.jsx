@@ -69,7 +69,7 @@ function Footer() {
         <div className="flex justify-center gap-6 mb-4">
           {/* YouTube */}
           <a
-            href="https://youtube.com/YourChannelName"
+            href="https://www.youtube.com/@Nalayak_Developer"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:scale-110 transition-transform"
@@ -82,7 +82,7 @@ function Footer() {
 
           {/* Facebook */}
          <a
-  href="https://linkedin.com/in/your-profile"
+  href="https://www.linkedin.com/in/biltu-bag-01b5172a7?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"
   target="_blank"
   rel="noopener noreferrer"
   className="hover:scale-110 transition-transform"
@@ -96,7 +96,7 @@ function Footer() {
 
           {/* X (Twitter) */}
           <a
-            href="https://twitter.com/your_username"
+            href="https://x.com/bag_biltu?s=21"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:scale-110 transition-transform"

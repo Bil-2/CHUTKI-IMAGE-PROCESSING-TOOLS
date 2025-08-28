@@ -90,9 +90,7 @@ const Login = () => {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="mx-auto h-20 w-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mb-6"
           >
-            <svg className="h-10 w-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
+            <span className="text-6xl">👱🏼‍♀️</span>
           </motion.div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Sign in to CHUTKI

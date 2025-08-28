@@ -31,7 +31,9 @@ import { successResponse, errorResponse } from "./utils/response.js";
 import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.js";
 
 // Import modular tools router
-import modularToolsRoutes from './api/modular-tools.js';
+import authRoutes from "./routes/auth.js";
+import modularToolsRoutes from "./api/modular-tools.js";
+import chatgptRoutes from "./api/chatgpt.js";
 
 // Validate environment configuration
 const { errors, warnings } = validateEnvironment();
@@ -212,9 +214,16 @@ app.use("/uploads", (req, res, next) => {
 }, express.static(path.join(__dirname, "uploads")));
 
 // ================== Routes ==================
+// Favicon route to prevent 500 errors
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).send();
+});
+
 // Authentication routes
-import authRoutes from "./routes/auth.js";
 app.use('/api/auth', authRoutes);
+
+// ChatGPT API routes
+app.use('/api/chatgpt', chatgptRoutes);
 
 // Use modular tools router
 app.use('/api/tools', modularToolsRoutes);
@@ -248,7 +257,7 @@ app.get("/api/health", (req, res) => {
     version: process.env.npm_package_version || '1.0.0'
   };
 
-  res.status(200).json(successResponse('Service healthy', healthData));
+  res.status(200).json(successResponse({ message: 'Service healthy', data: healthData }));
 });
 
 // Google OAuth routes are handled in routes/auth.js
@@ -299,7 +308,11 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use("*", (req, res) => {
-  res.status(404).json(errorResponse(res, `Route not found: ${req.method} ${req.originalUrl}`));
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // ================== Graceful Shutdown ==================

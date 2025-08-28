@@ -9,30 +9,47 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
-import User from '../models/User.js';
 
-// JWT Strategy for API authentication
-passport.use(new JwtStrategy({
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET || 'chutki-secret-key-2024'
-}, async (payload, done) => {
-  try {
-    const user = await User.findById(payload.id);
-    if (user && user.isActive) {
-      return done(null, user);
-    }
-    return done(null, false);
-  } catch (error) {
-    return done(error, false);
+// Only import User model if database is enabled
+let User = null;
+try {
+  if (global.DATABASE_CONNECTED !== false) {
+    const userModule = await import('../models/User.js');
+    User = userModule.default;
   }
-}));
+} catch (error) {
+  console.log(' User model not loaded - running in standalone mode');
+}
+
+// JWT Strategy for API authentication - only if database is connected
+if (User) {
+  passport.use(new JwtStrategy({
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: process.env.JWT_SECRET || 'chutki-secret-key-2024'
+  }, async (payload, done) => {
+    try {
+      const user = await User.findById(payload.id);
+      if (user && user.isActive) {
+        return done(null, user);
+      }
+      return done(null, false);
+    } catch (error) {
+      return done(error, false);
+    }
+  }));
+}
 
 // Debug environment variables
-console.log('🔍 Passport.js - GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
-console.log('🔍 Passport.js - GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
+console.log(' Passport.js - GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
+console.log(' Passport.js - GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
 
-// Google OAuth Strategy - Only initialize if credentials are available
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-google-client-id-here' && process.env.GOOGLE_CLIENT_ID.includes('.apps.googleusercontent.com')) {
+// Google OAuth Strategy - Only initialize if credentials are available AND database is connected
+const shouldEnableGoogleOAuth = process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_SECRET &&
+  User &&
+  global.DATABASE_CONNECTED !== false;
+
+if (shouldEnableGoogleOAuth) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -54,23 +71,36 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your-googl
     }
   }));
   console.log('✅ Google OAuth strategy initialized');
+} else if (!User) {
+  console.log('📝 Google OAuth disabled - Running in standalone mode (no database)');
 } else {
   console.log('⚠️  Google OAuth disabled - No valid credentials provided');
 }
 
-// Serialize user for session
-passport.serializeUser((user, done) => {
-  done(null, user._id);
-});
+// Serialize user for session - only if database is connected
+if (User) {
+  passport.serializeUser((user, done) => {
+    done(null, user._id);
+  });
 
-// Deserialize user from session
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
+  // Deserialize user from session
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
+} else {
+  // Dummy serialization for standalone mode
+  passport.serializeUser((user, done) => {
     done(null, user);
-  } catch (error) {
-    done(error, null);
-  }
-});
+  });
+
+  passport.deserializeUser((user, done) => {
+    done(null, user);
+  });
+}
 
 export default passport;

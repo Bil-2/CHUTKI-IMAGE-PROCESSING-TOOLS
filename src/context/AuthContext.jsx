@@ -88,6 +88,36 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
       }
     }
+
+    // Listen for storage events (OAuth login from other tabs/components)
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' && e.newValue) {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            dispatch({
+              type: 'LOGIN_SUCCESS',
+              payload: {
+                token: e.newValue,
+                user: parsedUser
+              }
+            });
+          } catch (error) {
+            console.error('Error parsing user data from storage event:', error);
+          }
+        }
+      } else if (e.key === 'token' && !e.newValue) {
+        // Token was removed (logout)
+        dispatch({ type: 'LOGOUT' });
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Login function
