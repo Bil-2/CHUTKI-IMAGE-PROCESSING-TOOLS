@@ -188,22 +188,22 @@ function AppContent() {
       <header className="relative shadow-lg z-50">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
 
-        <div className="relative max-w-6xl mx-auto flex justify-between items-center px-3 sm:px-4 py-3 sm:py-4">
+        <div className="relative max-w-7xl mx-auto flex justify-between items-center px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4">
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-white/20 backdrop-blur-lg p-1.5 sm:p-2 rounded-full border border-white/20 animate-logo-glow hover:bg-white/30 transition-all duration-500">
-              <span className="text-6xl sm:text-5xl inline-block animate-pulse hover:animate-none hover:scale-125 hover:rotate-12 transform transition-all duration-500 ease-out cursor-pointer">👱🏼‍♀️</span>
+            <div className="bg-white/20 backdrop-blur-lg p-1 sm:p-1.5 lg:p-2 rounded-full border border-white/20 animate-logo-glow hover:bg-white/30 transition-all duration-500">
+              <span className="text-2xl sm:text-3xl lg:text-4xl inline-block animate-pulse hover:animate-none hover:scale-125 hover:rotate-12 transform transition-all duration-500 ease-out cursor-pointer">👱🏼‍♀️</span>
             </div>
-            <h1 className="text-base sm:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
+            <h1 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
               Chutki Image Tools
             </h1>
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4">
             <button
               onClick={toggleTheme}
-              className="rounded-full p-1.5 sm:p-2 bg-white/30 hover:bg-white/40 backdrop-blur-sm transition-all duration-300 hover:scale-110"
+              className="rounded-full p-1.5 sm:p-2 bg-white/30 hover:bg-white/40 backdrop-blur-sm transition-all duration-300 hover:scale-110 text-lg sm:text-xl"
               aria-label="Toggle Dark Mode"
             >
               {darkMode ? "☀️" : "🌙"}
@@ -211,7 +211,7 @@ function AppContent() {
 
             <button
               onClick={logout}
-              className="group relative rounded-full p-2 sm:p-2.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 text-white text-lg sm:text-xl"
+              className="group relative rounded-full p-1.5 sm:p-2 lg:p-2.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 text-white text-base sm:text-lg lg:text-xl"
               aria-label="Logout"
               title="Logout"
             >
@@ -220,13 +220,13 @@ function AppContent() {
 
             <button
               onClick={toggleMenu}
-              className="relative flex flex-col justify-center items-center space-y-1 sm:space-y-1.5 p-2 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 group"
+              className="relative flex flex-col justify-center items-center space-y-0.5 sm:space-y-1 lg:space-y-1.5 p-1.5 sm:p-2 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 group"
               title="Menu"
               aria-label="Open Menu"
             >
-              <span className="block w-5 sm:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-7"></span>
-              <span className="block w-5 sm:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-7"></span>
-              <span className="block w-5 sm:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-7"></span>
+              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
+              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
+              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
             </button>
           </div>
         </div>
@@ -239,13 +239,13 @@ function AppContent() {
       >
         <button
           onClick={toggleMenu}
-          className="absolute top-4 right-4 text-white text-2xl sm:text-3xl hover:text-gray-300"
+          className="absolute top-3 sm:top-4 right-3 sm:right-4 text-white text-xl sm:text-2xl lg:text-3xl hover:text-gray-300 z-10"
           aria-label="Close Menu"
         >
           ✕
         </button>
 
-        <nav className="mt-16 sm:mt-20 flex flex-col items-start px-5 sm:pl-10 space-y-4 sm:space-y-6 text-white text-sm sm:text-lg font-semibold">
+        <nav className="mt-12 sm:mt-16 lg:mt-20 flex flex-col items-start px-4 sm:px-6 lg:pl-10 space-y-3 sm:space-y-4 lg:space-y-6 text-white text-sm sm:text-base lg:text-lg font-semibold">
           {[
             "Home",
             "Merge PDF's",
@@ -263,7 +263,7 @@ function AppContent() {
             <button
               key={idx}
               onClick={() => handleNavigation(item)}
-              className="hover:text-purple-300 text-left"
+              className="hover:text-purple-300 text-left transition-colors duration-200 py-1 px-2 hover:bg-white/10 rounded-md w-full"
             >
               | {item}
             </button>

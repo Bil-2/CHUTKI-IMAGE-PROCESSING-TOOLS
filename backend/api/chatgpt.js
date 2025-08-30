@@ -28,11 +28,26 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    // Check if AI chat is disabled
+    if (process.env.DISABLE_AI_CHAT === 'true') {
+      return res.json({
+        response: "Hi! I'm Chutki Assistant. AI chat is currently disabled, but I can still help you with image processing tools. Try uploading an image and I'll suggest the best tools for your needs!",
+        conversationId: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        fallback: true
+      });
+    }
+
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
     if (!OPENAI_API_KEY) {
-      return res.status(500).json({
-        error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your environment variables.'
+      // Provide helpful fallback response
+      const fallbackResponse = getFallbackResponse(message);
+      return res.json({
+        response: fallbackResponse,
+        conversationId: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        fallback: true
       });
     }
 
@@ -85,22 +100,36 @@ router.post('/chat', async (req, res) => {
         error: errorData
       });
 
+      // Provide fallback response for rate limits and other errors
+      const fallbackResponse = getFallbackResponse(message);
+
       if (response.status === 401) {
-        return res.status(401).json({
-          error: 'Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.'
+        return res.json({
+          response: fallbackResponse + "\n\n(Note: OpenAI API key is invalid)",
+          conversationId: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          fallback: true
         });
       } else if (response.status === 429) {
-        return res.status(429).json({
-          error: 'OpenAI API rate limit exceeded. Please wait a few minutes and try again. Consider upgrading your OpenAI plan for higher limits.',
-          retryAfter: '5 minutes'
+        return res.json({
+          response: fallbackResponse + "\n\n(Note: AI is temporarily busy, but I can still help!)",
+          conversationId: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          fallback: true
         });
       } else if (response.status === 402) {
-        return res.status(402).json({
-          error: 'OpenAI API quota exceeded. Please check your billing and usage at https://platform.openai.com/usage'
+        return res.json({
+          response: fallbackResponse + "\n\n(Note: AI quota exceeded, using built-in responses)",
+          conversationId: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          fallback: true
         });
       } else {
-        return res.status(500).json({
-          error: 'OpenAI API error: ' + (errorData.error?.message || `HTTP ${response.status}`)
+        return res.json({
+          response: fallbackResponse,
+          conversationId: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+          fallback: true
         });
       }
     }
@@ -116,11 +145,46 @@ router.post('/chat', async (req, res) => {
 
   } catch (error) {
     console.error('ChatGPT API Error:', error);
-    res.status(500).json({
-      error: 'Failed to process chat request: ' + error.message
+    const fallbackResponse = getFallbackResponse(req.body.message || '');
+    res.json({
+      response: fallbackResponse,
+      conversationId: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      fallback: true
     });
   }
 });
+
+// Fallback response function
+function getFallbackResponse(message) {
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('compress') || lowerMessage.includes('size')) {
+    return "I can help you compress images! Try the 'Reduce Image Size in KB' tool or specific compression tools like 'Compress to 100KB'. Upload your image and select the compression tool that fits your needs.";
+  }
+
+  if (lowerMessage.includes('background') || lowerMessage.includes('remove')) {
+    return "For background removal, try the 'Remove Background' tool. Upload your image and it will automatically detect and remove the background, giving you a transparent PNG file.";
+  }
+
+  if (lowerMessage.includes('resize')) {
+    return "I can help resize your images! Use tools like 'Resize Image Pixel', 'Resize Image in CM', or specific presets like 'Instagram Size' or 'Passport Photo Maker'. What dimensions do you need?";
+  }
+
+  if (lowerMessage.includes('pdf')) {
+    return "To convert images to PDF, use the 'Image to PDF' tool. You can also create size-specific PDFs like 'JPG to PDF Under 50KB' or 'JPG to PDF Under 100KB'.";
+  }
+
+  if (lowerMessage.includes('text') || lowerMessage.includes('ocr')) {
+    return "For text extraction, use the 'JPG to Text' or 'PNG to Text' OCR tools. Upload your image and I'll extract all readable text from it.";
+  }
+
+  if (lowerMessage.includes('passport') || lowerMessage.includes('photo')) {
+    return "The 'Passport Photo Maker' tool can create professional passport photos with the correct dimensions and background. Just upload your photo and it will generate multiple copies in standard sizes.";
+  }
+
+  return "Hi! I'm Chutki Assistant. I can help you with image processing tasks like compression, resizing, format conversion, background removal, OCR text extraction, and more. Upload an image and I'll suggest the best tools for your needs!";
+}
 
 // Get AI suggestions for image processing
 router.post('/suggest', async (req, res) => {

@@ -78,10 +78,10 @@ export const toolsConfig = {
     {
       name: "Resize Image to 6cm x 2cm (300 DPI)",
       route: "/tools/resize-6x2-300dpi",
-      description: "Resize to exact 6cm x 2cm at 300 DPI",
+      description: "Resize to exact 6cm x 2cm at customizable DPI",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-6x2-300dpi`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "dpi"]
     },
     {
       name: "Pi7 Bulk Image Resizer",
@@ -154,7 +154,7 @@ export const toolsConfig = {
       description: "Resize signature to 50mm x 20mm",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-sign-50x20mm`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "dpi"]
     },
     {
       name: "Resize Image for Instagram (No Crop)",
@@ -259,7 +259,7 @@ export const toolsConfig = {
       description: "Convert image to black and white",
       endpoint: `${config.API_BASE_URL}/api/tools/black-white`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "contrast"]
     },
     {
       name: "Grayscale Image",
@@ -267,7 +267,7 @@ export const toolsConfig = {
       description: "Convert image to grayscale",
       endpoint: `${config.API_BASE_URL}/api/tools/grayscale`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "intensity"]
     },
     {
       name: "Remove Image Background",
@@ -275,7 +275,7 @@ export const toolsConfig = {
       description: "Remove background from image",
       endpoint: `${config.API_BASE_URL}/api/tools/remove-background`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "edge"]
     },
     {
       name: "Resize Image to 4x6",
@@ -307,7 +307,7 @@ export const toolsConfig = {
       description: "Resize image to 600x600 pixels",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-600x600`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "maintain"]
     },
     {
       name: "Resize Image to 35mm x 45mm",
@@ -331,7 +331,7 @@ export const toolsConfig = {
       description: "Resize image for SSC applications",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-ssc`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "dpi", "quality"]
     },
     {
       name: "Resize Image For PAN Card",
@@ -339,7 +339,7 @@ export const toolsConfig = {
       description: "Resize image for PAN card applications",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-pan`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "dpi", "quality"]
     },
     {
       name: "Resize Image For UPSC",
@@ -347,7 +347,7 @@ export const toolsConfig = {
       description: "Resize image for UPSC applications",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-upsc`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "dpi", "quality"]
     },
     {
       name: "Picture to Pixel Art",
@@ -363,7 +363,7 @@ export const toolsConfig = {
       description: "Resize image for YouTube banner (2560x1440)",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-youtube-banner`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "maintain"]
     },
     {
       name: "Super Resolution (Increase Image Quality)",
@@ -405,7 +405,7 @@ export const toolsConfig = {
       description: "Convert JPEG images to PNG format",
       endpoint: `${config.API_BASE_URL}/api/tools/jpeg-to-png`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "PNG to JPEG",
@@ -439,7 +439,7 @@ export const toolsConfig = {
       description: "Convert JPG to PDF under 50KB",
       endpoint: `${config.API_BASE_URL}/api/tools/jpg-to-pdf-50kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "pageSize"]
     },
     {
       name: "JPG to PDF Under 100KB",
@@ -447,7 +447,7 @@ export const toolsConfig = {
       description: "Convert JPG to PDF under 100KB",
       endpoint: `${config.API_BASE_URL}/api/tools/jpg-to-pdf-100kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "pageSize"]
     },
     {
       name: "JPEG to PDF Under 200KB",
@@ -455,7 +455,7 @@ export const toolsConfig = {
       description: "Convert JPEG to PDF under 200KB",
       endpoint: `${config.API_BASE_URL}/api/tools/jpeg-to-pdf-200kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "pageSize"]
     },
     {
       name: "JPG to PDF Under 300KB",
@@ -463,7 +463,7 @@ export const toolsConfig = {
       description: "Convert JPG to PDF under 300KB",
       endpoint: `${config.API_BASE_URL}/api/tools/jpg-to-pdf-300kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "pageSize"]
     },
     {
       name: "JPG to PDF Under 500KB",
@@ -471,7 +471,7 @@ export const toolsConfig = {
       description: "Convert JPG to PDF under 500KB",
       endpoint: `${config.API_BASE_URL}/api/tools/jpg-to-pdf-500kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality", "pageSize"]
     },
     {
       name: "Image To PDF",
@@ -513,7 +513,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 5KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-5kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 10kb",
@@ -521,7 +521,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 10KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-10kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image To 15kb",
@@ -529,7 +529,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 15KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-15kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image To 20kb",
@@ -537,7 +537,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 20KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-20kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image Between 20kb to 50kb",
@@ -553,7 +553,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 25KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-25kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 30kb",
@@ -561,7 +561,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 30KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-30kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 40kb",
@@ -569,7 +569,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 40KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-40kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image to 50kb",
@@ -577,7 +577,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 50KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-50kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image to 100kb",
@@ -585,7 +585,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 100KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-100kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 150kb",
@@ -593,7 +593,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 150KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-150kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image To 200kb",
@@ -601,7 +601,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 200KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-200kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 300kb",
@@ -609,7 +609,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 300KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-300kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress JPEG To 500kb",
@@ -617,7 +617,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 500KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-500kb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image To 1 MB",
@@ -625,7 +625,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 1MB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-1mb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "Compress Image To 2 MB",
@@ -633,7 +633,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 2MB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-2mb`,
       method: "POST",
-      fields: ["file"]
+      fields: ["file", "quality"]
     },
     {
       name: "JPG To KB Convert",
@@ -659,6 +659,7 @@ export const toolsConfig = {
       method: "POST",
       fields: ["file", "targetMB"]
     }
+
   ]
 };
 

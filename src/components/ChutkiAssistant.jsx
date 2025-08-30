@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo } from "react";
 import { FaTimes, FaMicrophone, FaPaperPlane, FaUpload, FaCopy, FaTrash, FaExpand, FaCompress, FaSpinner } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
@@ -35,18 +35,20 @@ const ChutkiAssistant = React.memo(() => {
   const timeIntervalRef = useRef(null);
   const introIntervalRef = useRef(null);
 
+  // Memoized welcome message
+  const welcomeMessage = useMemo(() => ({
+    id: Date.now(),
+    role: 'assistant',
+    content: '👋 **Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
+    timestamp: new Date()
+  }), []);
+
   // Welcome message on first load
   useEffect(() => {
     if (chatState.messages.length === 0) {
-      const welcomeMessage = {
-        id: Date.now(),
-        role: 'assistant',
-        content: '👋 **Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
-        timestamp: new Date()
-      };
       setChatState(prev => ({ ...prev, messages: [welcomeMessage] }));
     }
-  }, [chatState.messages.length]);
+  }, [chatState.messages.length, welcomeMessage]);
 
   // Optimized drag and drop handlers with useCallback
   const handleDragOver = useCallback((e) => {
@@ -242,7 +244,6 @@ const ChutkiAssistant = React.memo(() => {
         setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage] }));
       }
     } catch (error) {
-      console.error('Chat error:', error);
       const errorMessage = {
         id: Date.now(),
         role: 'assistant',
