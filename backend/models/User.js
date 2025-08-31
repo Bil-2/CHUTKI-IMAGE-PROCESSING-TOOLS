@@ -63,6 +63,16 @@ const userSchema = new mongoose.Schema({
     }
   },
 
+  // Password reset fields
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
+
   // Usage tracking
   toolsUsed: [{
     toolName: String,
@@ -131,6 +141,24 @@ userSchema.methods.addToolUsage = function (toolName) {
     this.toolsUsed = this.toolsUsed.slice(-100);
   }
 
+  return this.save();
+};
+
+// Generate password reset token
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15);
+
+  this.resetPasswordToken = resetToken;
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  return resetToken;
+};
+
+// Clear password reset token
+userSchema.methods.clearPasswordResetToken = function () {
+  this.resetPasswordToken = null;
+  this.resetPasswordExpires = null;
   return this.save();
 };
 

@@ -29,7 +29,8 @@ CHUTKI is a comprehensive, AI-powered image processing web application that prov
 - **Real-time Analysis** - AI analyzes uploaded images and provides insights
 
 ### Enterprise-Grade Security
-- **JWT Authentication** - Secure token-based authentication
+- **JWT Authentication** - Secure token-based authentication with configurable expiration
+- **Password Reset System** - Secure token-based password recovery with 10-minute expiration
 - **Google OAuth Integration** - One-click sign-in with Google
 - **Rate Limiting** - Protection against abuse (100 req/15min, 20 uploads/15min)
 - **File Validation** - Comprehensive upload security and virus scanning
@@ -185,6 +186,26 @@ Content-Type: application/json
 {
   "email": "john@example.com",
   "password": "SecurePassword123!"
+}
+```
+
+#### Password Reset
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "NewSecurePassword123!"
 }
 ```
 

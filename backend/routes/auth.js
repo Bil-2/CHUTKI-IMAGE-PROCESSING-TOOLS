@@ -8,7 +8,9 @@ import {
   getProfile,
   updateProfile,
   logout,
-  verifyToken
+  verifyToken,
+  forgotPassword,
+  resetPassword
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -30,6 +32,10 @@ const router = express.Router();
 router.post('/register', requireDatabase, register);
 router.post('/login', requireDatabase, login);
 router.post('/logout', requireDatabase, logout);
+
+// Password reset routes
+router.post('/forgot-password', requireDatabase, forgotPassword);
+router.post('/reset-password', requireDatabase, resetPassword);
 
 // Token verification endpoint
 router.get('/verify-token', async (req, res) => {
