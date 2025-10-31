@@ -1,6 +1,39 @@
-import React from "react";
+import React, { useState } from "react";
+import toast from 'react-hot-toast';
 
 function Footer() {
+  const [hoveredTool, setHoveredTool] = useState(null);
+
+  const handleComingSoon = (toolName) => {
+    toast(
+      (t) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center animate-pulse">
+            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-bold text-gray-900">{toolName}</p>
+            <p className="text-sm text-gray-600">Coming Soon! Stay tuned for updates.</p>
+          </div>
+        </div>
+      ),
+      {
+        duration: 3000,
+        style: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: '#fff',
+          borderRadius: '16px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: '500',
+          boxShadow: '0 10px 40px rgba(102, 126, 234, 0.3)',
+          border: '2px solid rgba(255, 255, 255, 0.2)',
+        },
+      }
+    );
+  };
   return (
     <footer className="bg-gradient-to-r from-purple-100 via-pink-100 to-blue-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 text-gray-800 dark:text-gray-200 pt-8 mt-16 border-t border-purple-300/40 dark:border-purple-500/40">
       <div className="max-w-7xl mx-auto px-6 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
@@ -8,9 +41,9 @@ function Footer() {
         <div className="sm:col-span-2">
           <div className="flex items-center gap-3 mb-3">
             <img
-              src="https://img.icons8.com/fluency/96/bot.png"
-              alt="Chutki Logo"
-              className="w-10 h-10 animate-bounce-slow drop-shadow-lg hover:scale-110 hover:rotate-6 transition-transform duration-300"
+              src="/logo.svg"
+              alt="CHUTKI Logo"
+              className="w-12 h-12 drop-shadow-lg hover:scale-110 hover:rotate-3 transition-transform duration-300"
             />
             <span className="text-xl font-bold bg-gradient-to-r from-purple-700 via-pink-600 to-yellow-500 bg-clip-text text-transparent">
               Chutki Image Tool
@@ -34,14 +67,28 @@ function Footer() {
         <div className="sm:col-span-2 md:col-span-2 flex flex-row gap-8">
           {/* GIF Tools */}
           <div className="flex-1">
-            <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">GIF Tools</h4>
+            <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+              </svg>
+              GIF Tools
+            </h4>
             <ul className="space-y-2 text-sm">
               {["GIF Maker", "GIF Compressor", "Add Text to GIFs"].map((tool, i) => (
                 <li
                   key={i}
-                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                  onClick={() => handleComingSoon(tool)}
+                  onMouseEnter={() => setHoveredTool(tool)}
+                  onMouseLeave={() => setHoveredTool(null)}
+                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer flex items-center gap-2 group"
                 >
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full group-hover:scale-150 transition-transform"></span>
                   {tool}
+                  {hoveredTool === tool && (
+                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full animate-pulse">
+                      Coming Soon
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -49,14 +96,28 @@ function Footer() {
 
           {/* Chutki Tools */}
           <div className="flex-1">
-            <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3">Chutki Tools</h4>
+            <h4 className="font-semibold text-purple-900 dark:text-purple-300 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Chutki Tools
+            </h4>
             <ul className="space-y-2 text-sm">
               {["Chutki PDF Tool", "Convert Video to GIF", "List of Image Tools"].map((tool, i) => (
                 <li
                   key={i}
-                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+                  onClick={() => handleComingSoon(tool)}
+                  onMouseEnter={() => setHoveredTool(tool)}
+                  onMouseLeave={() => setHoveredTool(null)}
+                  className="hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer flex items-center gap-2 group"
                 >
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full group-hover:scale-150 transition-transform"></span>
                   {tool}
+                  {hoveredTool === tool && (
+                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full animate-pulse">
+                      Coming Soon
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

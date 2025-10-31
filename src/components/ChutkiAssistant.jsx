@@ -3,11 +3,17 @@ import { FaTimes, FaMicrophone, FaPaperPlane, FaUpload, FaCopy, FaTrash, FaExpan
 import { motion, AnimatePresence } from "framer-motion";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import config from '../config';
+import { toolsConfig, getAllTools, searchTools, getToolByName } from '../toolsConfig';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Lazy load heavy components
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
 const ChutkiAssistant = React.memo(() => {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
   // Consolidated UI state
   const [uiState, setUiState] = useState({
     open: false,
@@ -15,15 +21,121 @@ const ChutkiAssistant = React.memo(() => {
     isDragOver: false,
     showEmojiPicker: false,
     isTyping: false,
-    copiedMessageId: null
+    copiedMessageId: null,
+    processingTool: null, // Track current tool processing
+    showToolList: false // Show available tools
   });
 
-  // Chat state
+  // Chat state with ULTRA-ADVANCED Predictive AI + Auto-Learning
   const [chatState, setChatState] = useState({
     messages: [],
     note: "",
-    selectedFile: null
+    selectedFile: null,
+    userIntent: null, // Track user's current intent
+    suggestedTools: [], // AI-suggested tools based on context
+    conversationContext: {}, // Remember key details from conversation
+    userProfile: { // ULTRA-ADVANCED: Predictive Learning Profile
+      preferredTools: {}, // Track tool usage frequency
+      commonTasks: [], // Learn user's common workflows
+      filePatterns: {}, // Remember typical file sizes/formats
+      compressionPreferences: {}, // Learn preferred compression levels
+      lastUsedParams: {}, // Remember last used parameters for each tool
+      // NEW: Predictive Intelligence
+      timePatterns: {}, // Learn when user uses which tools (time-based prediction)
+      intentHistory: [], // Track intent evolution to predict next action
+      successfulWorkflows: [], // Remember which workflows gave best results
+      quickActions: [], // Auto-generated shortcuts based on 3+ repeated actions
+      skillLevel: 'beginner', // Adaptive: beginner → intermediate → expert
+      sessionGoals: [], // Predict user's session objective
+      smartDefaults: {} // Learn user's preferred defaults per tool
+    }
   });
+
+  // ULTRA-ADVANCED: Load profile + Analyze session context on mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('chutkiUserProfile');
+    if (savedProfile) {
+      try {
+        const profile = JSON.parse(savedProfile);
+        
+        // AUTO-ANALYZE: Determine skill level from interaction count
+        const totalInteractions = Object.values(profile.preferredTools || {}).reduce((sum, t) => sum + t.count, 0);
+        let skillLevel = 'beginner';
+        if (totalInteractions > 50) skillLevel = 'expert';
+        else if (totalInteractions > 15) skillLevel = 'intermediate';
+        
+        // AUTO-GENERATE: Quick actions from repeated workflows
+        const quickActions = [];
+        if (profile.commonTasks && profile.commonTasks.length >= 3) {
+          const workflows = {};
+          profile.commonTasks.forEach(task => {
+            if (task.tools && task.tools.length >= 2) {
+              const pattern = task.tools.join(' → ');
+              workflows[pattern] = (workflows[pattern] || 0) + 1;
+            }
+          });
+          
+          Object.entries(workflows).forEach(([pattern, count]) => {
+            if (count >= 3) {
+              quickActions.push({
+                name: pattern.split(' → ').slice(0, 2).join(' + '),
+                workflow: pattern.split(' → '),
+                frequency: count,
+                lastUsed: new Date()
+              });
+            }
+          });
+        }
+        
+        setChatState(prev => ({ 
+          ...prev, 
+          userProfile: { 
+            ...prev.userProfile, 
+            ...profile,
+            skillLevel,
+            quickActions
+          }
+        }));
+        
+        // PREDICTIVE: Show personalized welcome for returning users
+        if (totalInteractions >= 5) {
+          const currentHour = new Date().getHours();
+          let greeting = 'Welcome back';
+          if (currentHour >= 5 && currentHour < 12) greeting = 'Good morning';
+          else if (currentHour >= 12 && currentHour < 17) greeting = 'Good afternoon';
+          else if (currentHour >= 17 && currentHour < 22) greeting = 'Good evening';
+          else greeting = 'Working late';
+          
+          setTimeout(() => {
+            const quickActionsText = quickActions.length > 0 
+              ? '\\n\\n**⚡ Quick Actions Available:**\\n' + quickActions.slice(0, 2).map((qa, i) => `${i+1}. ${qa.name} (used ${qa.frequency}x)`).join('\\n')
+              : '';
+            
+            const welcomeBack = {
+              id: Date.now(),
+              role: 'assistant',
+              content: `**${greeting}! 🎯**
+
+I've learned from your **${totalInteractions} interactions**. I'm now at **${skillLevel}** mode to better assist you.${quickActionsText}
+
+*What would you like to work on today?*`,
+              timestamp: new Date()
+            };
+            setChatState(prev => ({ ...prev, messages: [welcomeBack] }));
+          }, 500);
+        }
+      } catch (error) {
+        console.log('No saved profile found, starting fresh');
+      }
+    }
+  }, []);
+
+  // ADVANCED: Save user profile to localStorage whenever it changes
+  useEffect(() => {
+    if (chatState.userProfile && Object.keys(chatState.userProfile.preferredTools).length > 0) {
+      localStorage.setItem('chutkiUserProfile', JSON.stringify(chatState.userProfile));
+    }
+  }, [chatState.userProfile]);
 
   const [time, setTime] = useState("");
   const [currentIntroIndex, setCurrentIntroIndex] = useState(0);
@@ -35,13 +147,40 @@ const ChutkiAssistant = React.memo(() => {
   const timeIntervalRef = useRef(null);
   const introIntervalRef = useRef(null);
 
-  // Memoized welcome message
+  // ALL 100+ TOOLS integrated from toolsConfig
+  const allTools = useMemo(() => getAllTools(), []);
+  
+  // Memoized welcome message with REAL project capabilities
   const welcomeMessage = useMemo(() => ({
     id: Date.now(),
     role: 'assistant',
-    content: '**Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
+    content: `**Welcome to CHUTKI AI! 🎯**
+
+I'm your intelligent assistant for **${allTools.length}+ Professional Image Tools**. I can directly process your images!
+
+**🔥 I Can Process:**
+• **Smart Compression**: Hit exact sizes (5KB to 2MB)
+• **Format Conversion**: HEIC→JPG, PNG→JPEG, WEBP→JPG
+• **Passport Photos**: Custom sizes with DPI control
+• **Background Removal**: AI-powered transparency
+• **OCR Text Extraction**: JPG/PNG to Text
+• **PDF Creation**: Image to PDF (50KB-500KB sizes)
+• **Resize Tools**: Pixels, CM, MM, Inches, DPI
+• **Effects**: Grayscale, Pixelate, Circle Crop, Blur
+• **Watermarking**: Text/Image overlays
+• **Batch Processing**: Multiple images at once
+
+**💡 Try Commands:**
+• "Compress to 100KB" - I'll compress your image
+• "Convert HEIC to JPG" - Format conversion
+• "Make passport photo 35x45mm" - Passport generator
+• "Extract text from image" - OCR processing
+• "Remove background" - AI background removal
+• "Show all tools" - Browse ${allTools.length}+ tools
+
+**Upload images and I'll process them INSTANTLY!** 🚀`,
     timestamp: new Date()
-  }), []);
+  }), [allTools.length]);
 
   // Welcome message on first load
   useEffect(() => {
@@ -197,8 +336,614 @@ What processing would you like me to perform?`,
     return displayedText;
   };
 
+  // ULTRA-ADVANCED: Update profile + Predictive learning + Auto-optimization
+  const updateUserProfile = useCallback((toolName, params = {}) => {
+    setChatState(prev => {
+      const newProfile = { ...prev.userProfile };
+      
+      // Track tool usage frequency
+      if (!newProfile.preferredTools[toolName]) {
+        newProfile.preferredTools[toolName] = { count: 0, lastUsed: new Date(), avgTime: 0 };
+      }
+      newProfile.preferredTools[toolName].count += 1;
+      newProfile.preferredTools[toolName].lastUsed = new Date();
+      
+      // NEW: Time-based pattern learning (predict when user uses which tool)
+      const currentHour = new Date().getHours();
+      if (!newProfile.timePatterns[toolName]) {
+        newProfile.timePatterns[toolName] = {};
+      }
+      newProfile.timePatterns[toolName][currentHour] = (newProfile.timePatterns[toolName][currentHour] || 0) + 1;
+      
+      // NEW: Smart defaults learning (remember successful parameter combinations)
+      if (Object.keys(params).length > 0) {
+        if (!newProfile.smartDefaults[toolName]) {
+          newProfile.smartDefaults[toolName] = [];
+        }
+        newProfile.smartDefaults[toolName].push({ params, timestamp: new Date() });
+        // Keep only last 5 successful params
+        if (newProfile.smartDefaults[toolName].length > 5) {
+          newProfile.smartDefaults[toolName] = newProfile.smartDefaults[toolName].slice(-5);
+        }
+        newProfile.lastUsedParams[toolName] = params;
+      }
+      
+      // Track common tasks (workflows)
+      if (newProfile.commonTasks.length > 0) {
+        const lastTask = newProfile.commonTasks[newProfile.commonTasks.length - 1];
+        if (Date.now() - new Date(lastTask.timestamp).getTime() < 300000) { // Within 5 min
+          lastTask.tools.push(toolName);
+          // NEW: Track workflow success
+          if (!lastTask.success) lastTask.success = 0;
+          lastTask.success += 1;
+        } else {
+          newProfile.commonTasks.push({ tools: [toolName], timestamp: new Date(), success: 1 });
+        }
+      } else {
+        newProfile.commonTasks.push({ tools: [toolName], timestamp: new Date(), success: 1 });
+      }
+      
+      // NEW: Identify successful workflows (3+ tools with high success rate)
+      const recentWorkflows = newProfile.commonTasks.slice(-10);
+      recentWorkflows.forEach(task => {
+        if (task.tools.length >= 2 && task.success >= 2) {
+          const workflowKey = task.tools.join(' → ');
+          const existing = (newProfile.successfulWorkflows || []).find(w => w.pattern === workflowKey);
+          if (existing) {
+            existing.count += 1;
+            existing.lastUsed = new Date();
+          } else {
+            if (!newProfile.successfulWorkflows) newProfile.successfulWorkflows = [];
+            newProfile.successfulWorkflows.push({
+              pattern: workflowKey,
+              tools: task.tools,
+              count: 1,
+              lastUsed: new Date()
+            });
+          }
+        }
+      });
+      
+      // Keep only last 20 tasks to prevent bloat
+      if (newProfile.commonTasks.length > 20) {
+        newProfile.commonTasks = newProfile.commonTasks.slice(-20);
+      }
+      
+      // NEW: Auto-calculate skill level progression
+      const totalInteractions = Object.values(newProfile.preferredTools).reduce((sum, t) => sum + t.count, 0);
+      if (totalInteractions > 50) newProfile.skillLevel = 'expert';
+      else if (totalInteractions > 15) newProfile.skillLevel = 'intermediate';
+      else newProfile.skillLevel = 'beginner';
+      
+      return { ...prev, userProfile: newProfile };
+    });
+  }, []);
+
+  // ULTRA-ADVANCED: Predictive recommendations with time-based AI + context prediction
+  const getPersonalizedRecommendations = useCallback(() => {
+    const { preferredTools, commonTasks, lastUsedParams, timePatterns, successfulWorkflows, smartDefaults, skillLevel, intentHistory } = chatState.userProfile;
+    const recommendations = [];
+    const currentHour = new Date().getHours();
+    
+    // NEW: Time-based predictions (predict tools based on current time)
+    const timePredictions = [];
+    Object.entries(timePatterns || {}).forEach(([tool, hours]) => {
+      const usageAtThisHour = hours[currentHour] || 0;
+      if (usageAtThisHour >= 2) {
+        timePredictions.push({
+          tool,
+          score: usageAtThisHour,
+          reason: `🕐 You usually use this at ${currentHour}:00 (${usageAtThisHour}x)`
+        });
+      }
+    });
+    
+    // Add time-based predictions first (highest priority)
+    timePredictions.sort((a, b) => b.score - a.score).slice(0, 1).forEach(pred => {
+      recommendations.push({
+        tool: pred.tool,
+        reason: pred.reason,
+        params: smartDefaults?.[pred.tool]?.[0]?.params || lastUsedParams[pred.tool] || {},
+        priority: 'time-based',
+        predictive: true
+      });
+    });
+    
+    // Get top most used tools
+    const sortedTools = Object.entries(preferredTools || {})
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 3);
+    
+    sortedTools.forEach(([tool, data]) => {
+      // Skip if already recommended by time-based prediction
+      if (timePredictions.find(p => p.tool === tool)) return;
+      
+      // NEW: Show smart defaults if available
+      const defaults = smartDefaults?.[tool];
+      let paramInfo = '';
+      if (defaults && defaults.length > 0) {
+        const mostCommon = defaults[defaults.length - 1].params;
+        paramInfo = ` | Default: ${JSON.stringify(mostCommon).slice(0, 30)}`;
+      }
+      
+      recommendations.push({
+        tool,
+        reason: `⭐ Used ${data.count}x${paramInfo}`,
+        params: defaults?.[0]?.params || lastUsedParams[tool] || {},
+        priority: 'high'
+      });
+    });
+    
+    // NEW: Successful workflow predictions
+    if (successfulWorkflows && successfulWorkflows.length > 0) {
+      const topWorkflow = successfulWorkflows
+        .sort((a, b) => b.count - a.count)[0];
+      
+      if (topWorkflow && topWorkflow.count >= 2) {
+        recommendations.push({
+          workflow: topWorkflow.pattern,
+          tools: topWorkflow.tools,
+          reason: `🔄 Proven workflow (${topWorkflow.count}x success)`,
+          priority: 'workflow',
+          predictive: true
+        });
+      }
+    }
+    
+    // NEW: Intent-based next action prediction
+    if (intentHistory && intentHistory.length >= 2) {
+      const lastIntent = intentHistory[intentHistory.length - 1];
+      const intentSequences = {};
+      
+      for (let i = 0; i < intentHistory.length - 1; i++) {
+        const sequence = `${intentHistory[i]} → ${intentHistory[i + 1]}`;
+        intentSequences[sequence] = (intentSequences[sequence] || 0) + 1;
+      }
+      
+      const likelyNext = Object.entries(intentSequences)
+        .filter(([seq]) => seq.startsWith(lastIntent))
+        .sort((a, b) => b[1] - a[1])[0];
+      
+      if (likelyNext && likelyNext[1] >= 2) {
+        const nextIntent = likelyNext[0].split(' → ')[1];
+        recommendations.push({
+          intent: nextIntent,
+          reason: `🔮 You usually do "${nextIntent}" after "${lastIntent}" (${likelyNext[1]}x)`,
+          priority: 'predictive',
+          predictive: true
+        });
+      }
+    }
+    
+    return recommendations;
+  }, [chatState.userProfile]);
+
+  // NEW: Direct tool execution function
+  const executeToolDirectly = useCallback(async (toolName, params = {}) => {
+    if (!chatState.selectedFile || chatState.selectedFile.length === 0) {
+      const errorMsg = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `**⚠️ No Image Uploaded**
+
+Please upload an image first, then I can process it with **${toolName}**!
+
+*Click the upload button or drag & drop your image.*`,
+        timestamp: new Date()
+      };
+      setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMsg] }));
+      return;
+    }
+
+    const tool = getToolByName(toolName);
+    if (!tool) {
+      const errorMsg = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `**❌ Tool Not Found**\n\nCouldn't find tool: ${toolName}`,
+        timestamp: new Date()
+      };
+      setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMsg] }));
+      return;
+    }
+
+    setUiState(prev => ({ ...prev, processingTool: toolName }));
+    
+    const processingMsg = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `**🔄 Processing with ${toolName}...**\n\nPlease wait while I process your image${Object.keys(params).length > 0 ? ` with parameters: ${JSON.stringify(params)}` : ''}.`,
+      timestamp: new Date()
+    };
+    setChatState(prev => ({ ...prev, messages: [...prev.messages, processingMsg] }));
+
+    try {
+      const formData = new FormData();
+      formData.append('file', chatState.selectedFile[0]);
+      
+      // Add parameters
+      Object.keys(params).forEach(key => {
+        formData.append(key, params[key]);
+      });
+
+      const response = await fetch(tool.endpoint, {
+        method: tool.method,
+        body: formData
+      });
+
+      if (response.ok) {
+        // Update user profile with tool usage
+        updateUserProfile(toolName, params);
+        
+        if (tool.returnsJson) {
+          const data = await response.json();
+          const resultMsg = {
+            id: Date.now(),
+            role: 'assistant',
+            content: `**✅ Success! ${toolName}**
+
+**Result:**
+${JSON.stringify(data, null, 2)}
+
+*Processing completed successfully!*`,
+            timestamp: new Date()
+          };
+          setChatState(prev => ({ ...prev, messages: [...prev.messages, resultMsg] }));
+        } else {
+          // Download the processed file
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${toolName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.${tool.name.includes('PDF') ? 'pdf' : 'jpg'}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          const successMsg = {
+            id: Date.now(),
+            role: 'assistant',
+            content: `**✅ Success! ${toolName}**
+
+**Your image has been processed and downloaded!**
+
+*Want to process another image? Just upload and tell me what you need!*`,
+            timestamp: new Date()
+          };
+          setChatState(prev => ({ ...prev, messages: [...prev.messages, successMsg] }));
+        }
+      } else {
+        const errorData = await response.json();
+        const errorMsg = {
+          id: Date.now(),
+          role: 'assistant',
+          content: `**❌ Processing Failed**
+
+**Error:** ${errorData.error || 'Unknown error'}
+
+*Please try again or use a different tool.*`,
+          timestamp: new Date()
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMsg] }));
+      }
+    } catch (error) {
+      console.error('Tool execution error:', error);
+      const errorMsg = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `**❌ Connection Error**
+
+Failed to connect to the tool server. Please check your internet connection and try again.
+
+*Error: ${error.message}*`,
+        timestamp: new Date()
+      };
+      setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMsg] }));
+    } finally {
+      setUiState(prev => ({ ...prev, processingTool: null }));
+    }
+  }, [chatState.selectedFile, updateUserProfile]);
+
+  // NEW: Show all tools list
+  const showAllTools = useCallback(() => {
+    const categories = Object.keys(toolsConfig);
+    let toolsList = `**📋 All ${allTools.length} Available Tools:**\n\n`;
+    
+    categories.forEach(category => {
+      const tools = toolsConfig[category];
+      toolsList += `**${category}** (${tools.length} tools)\n`;
+      tools.slice(0, 5).forEach((tool, i) => {
+        toolsList += `${i + 1}. ${tool.name}\n`;
+      });
+      if (tools.length > 5) {
+        toolsList += `... and ${tools.length - 5} more\n`;
+      }
+      toolsList += `\n`;
+    });
+    
+    toolsList += `**💡 Pro Tip:** Say "use [tool name]" to execute any tool directly!\n\n*Example: "use Compress Image to 100kb" with your uploaded image.*`;
+    
+    const toolsMsg = {
+      id: Date.now(),
+      role: 'assistant',
+      content: toolsList,
+      timestamp: new Date()
+    };
+    setChatState(prev => ({ ...prev, messages: [...prev.messages, toolsMsg] }));
+  }, [allTools.length]);
+
+  const analyzeUserIntent = useCallback((message) => {
+    const lowerMessage = message.toLowerCase();
+    const suggestions = [];
+    let intent = 'general';
+    
+    // ULTRA-ADVANCED: Predictive + context-aware recommendations + REAL TOOL PROCESSING
+    const personalRecs = getPersonalizedRecommendations();
+    
+    // NEW: Auto-suggest even without explicit request (if predictive flag is set)
+    const shouldAutoSuggest = personalRecs.some(r => r.predictive) || /recommend|suggest|help|what|how|show.*tool/i.test(message);
+    
+    // NEW: Check for direct tool execution commands
+    const commandMatch = message.match(/^(compress|convert|resize|remove|extract|create|make|generate)\s+(.+)/i);
+    if (commandMatch) {
+      const action = commandMatch[1].toLowerCase();
+      const params = commandMatch[2];
+      
+      // Parse compression commands: "compress to 100KB"
+      if (action === 'compress' && /to\s+(\d+)\s*kb/i.test(params)) {
+        const targetKB = parseInt(params.match(/to\s+(\d+)\s*kb/i)[1]);
+        intent = 'compression';
+        suggestions.push({
+          tool: 'Reduce Image Size in KB',
+          reason: `🎯 Direct command detected: Compress to ${targetKB}KB`,
+          params: { targetKB },
+          executable: true,
+          priority: 'command'
+        });
+      }
+      // "convert HEIC to JPG"
+      else if (action === 'convert' && /heic.*jpg/i.test(params)) {
+        intent = 'conversion';
+        suggestions.push({
+          tool: 'HEIC to JPG',
+          reason: '🎯 Direct command: HEIC to JPG conversion',
+          executable: true,
+          priority: 'command'
+        });
+      }
+      // "remove background"
+      else if (action === 'remove' && /background/i.test(params)) {
+        intent = 'background';
+        suggestions.push({
+          tool: 'Remove Image Background',
+          reason: '🎯 Direct command: Background removal',
+          executable: true,
+          priority: 'command'
+        });
+      }
+      // "extract text" or "OCR"
+      else if ((action === 'extract' && /text/i.test(params)) || /ocr/i.test(message)) {
+        intent = 'ocr';
+        suggestions.push({
+          tool: 'JPG to Text',
+          reason: '🎯 Direct command: Text extraction (OCR)',
+          executable: true,
+          priority: 'command'
+        });
+      }
+      // "make passport photo 35x45mm"
+      else if ((action === 'make' || action === 'create' || action === 'generate') && /passport/i.test(params)) {
+        intent = 'passport';
+        const sizeMatch = params.match(/(\d+)\s*x\s*(\d+)\s*mm/i);
+        suggestions.push({
+          tool: 'Passport Photo Maker',
+          reason: sizeMatch ? `🎯 Passport photo: ${sizeMatch[0]}` : '🎯 Passport photo generator',
+          params: sizeMatch ? { size: `${sizeMatch[1]}x${sizeMatch[2]}` } : {},
+          executable: true,
+          priority: 'command'
+        });
+      }
+    }
+    
+    // NEW: "show all tools" command
+    if (/show.*tool|list.*tool|all.*tool|available.*tool|what.*can.*you/i.test(message)) {
+      intent = 'browse';
+      suggestions.push({
+        action: 'showToolList',
+        reason: '📋 Showing all available tools',
+        priority: 'command'
+      });
+    }
+    
+    if (personalRecs.length > 0 && shouldAutoSuggest) {
+      personalRecs.forEach(rec => {
+        if (rec.tool) {
+          suggestions.push({
+            tool: rec.tool,
+            reason: rec.reason,
+            params: rec.params,
+            personalized: true,
+            predictive: rec.predictive || false,
+            priority: rec.priority
+          });
+        } else if (rec.workflow) {
+          suggestions.push({
+            workflow: rec.workflow,
+            tools: rec.tools,
+            reason: rec.reason,
+            priority: rec.priority,
+            predictive: true
+          });
+        } else if (rec.intent) {
+          intent = rec.intent; // Override detected intent with predicted intent
+        }
+      });
+    }
+    
+    // NEW: Track intent for future predictions
+    setChatState(prev => ({
+      ...prev,
+      userProfile: {
+        ...prev.userProfile,
+        intentHistory: [...(prev.userProfile.intentHistory || []), intent].slice(-15)
+      }
+    }));
+
+    // Compression intent detection
+    if (/compress|reduce|smaller|size|kb|mb/i.test(message)) {
+      intent = 'compression';
+      const sizeMatch = message.match(/(\d+)\s*(kb|mb)/i);
+      if (sizeMatch) {
+        suggestions.push({
+          tool: 'Smart Compression',
+          reason: `Detected target size: ${sizeMatch[0]}`,
+          endpoint: '/api/tools/reduce-size-kb',
+          params: { targetKB: sizeMatch[2] === 'mb' ? parseInt(sizeMatch[1]) * 1024 : parseInt(sizeMatch[1]) }
+        });
+      } else {
+        suggestions.push(
+          { tool: 'Compress 100KB', reason: 'Popular choice for web optimization' },
+          { tool: 'Compress 50KB', reason: 'Great for email attachments' },
+          { tool: 'Compress 20KB', reason: 'Ultra-light compression' }
+        );
+      }
+    }
+
+    // Format conversion intent
+    if (/convert|change|format|heic|webp|png|jpg|jpeg/i.test(message)) {
+      intent = 'conversion';
+      if (/heic/i.test(message)) {
+        suggestions.push({ tool: 'HEIC to JPG', reason: 'iPhone photo format conversion' });
+      }
+      if (/webp/i.test(message)) {
+        suggestions.push({ tool: 'WEBP to JPG', reason: 'Modern web format to universal JPG' });
+      }
+      if (/png.*jpg|jpg.*png/i.test(message)) {
+        suggestions.push(
+          { tool: 'PNG to JPEG', reason: 'Reduce file size with background' },
+          { tool: 'JPEG to PNG', reason: 'Get transparency support' }
+        );
+      }
+    }
+
+    // Background removal intent
+    if (/background|remove|transparent|cutout/i.test(message)) {
+      intent = 'background';
+      suggestions.push(
+        { tool: 'Remove Background', reason: 'AI-powered background removal' },
+        { tool: 'JPEG to PNG', reason: 'Convert to support transparency' }
+      );
+    }
+
+    // Passport photo intent
+    if (/passport|photo|visa|id|2x2|3x4|4x6/i.test(message)) {
+      intent = 'passport';
+      const sizeMatch = message.match(/(\d+)\s*x\s*(\d+)/i);
+      suggestions.push({
+        tool: 'Passport Photo Generator',
+        reason: sizeMatch ? `Custom size: ${sizeMatch[0]}` : 'Standard passport photo sizes',
+        params: sizeMatch ? { size: `${sizeMatch[1]}x${sizeMatch[2]}` } : {}
+      });
+    }
+
+    // OCR/Text extraction intent
+    if (/text|ocr|extract|read|words|document/i.test(message)) {
+      intent = 'ocr';
+      suggestions.push({ tool: 'OCR Text Extraction', reason: 'Extract text from images using Tesseract' });
+    }
+
+    // Resize intent
+    if (/resize|dimensions|pixel|width|height|scale/i.test(message)) {
+      intent = 'resize';
+      const dimensionMatch = message.match(/(\d+)\s*x\s*(\d+)\s*(px|pixel)?/i);
+      suggestions.push({
+        tool: 'Resize Image',
+        reason: dimensionMatch ? `Target: ${dimensionMatch[0]}` : 'Custom dimensions',
+        params: dimensionMatch ? { width: dimensionMatch[1], height: dimensionMatch[2] } : {}
+      });
+    }
+
+    // PDF intent
+    if (/pdf|document|merge/i.test(message)) {
+      intent = 'pdf';
+      suggestions.push(
+        { tool: 'Image to PDF', reason: 'Convert images to PDF document' },
+        { tool: 'PDF Compression', reason: 'Reduce PDF file size' }
+      );
+    }
+
+    // Watermark intent
+    if (/watermark|copyright|logo|brand/i.test(message)) {
+      intent = 'watermark';
+      suggestions.push({ tool: 'Add Watermark', reason: 'Protect your images with custom watermark' });
+    }
+
+    // Effects intent
+    if (/gray|black.*white|pixelate|blur|effect|filter/i.test(message)) {
+      intent = 'effects';
+      if (/gray/i.test(message)) suggestions.push({ tool: 'Grayscale', reason: 'Convert to black & white' });
+      if (/pixel/i.test(message)) suggestions.push({ tool: 'Pixelate', reason: 'Create pixel art effect' });
+      if (/circle/i.test(message)) suggestions.push({ tool: 'Circle Crop', reason: 'Round profile picture' });
+    }
+
+    // Batch processing intent
+    if (/multiple|batch|all|several/i.test(message)) {
+      suggestions.push({ tool: 'Batch Processing', reason: 'Process multiple images at once' });
+    }
+
+    // ADVANCED: Learn from file patterns if files are uploaded
+    if (chatState.selectedFile && chatState.selectedFile.length > 0) {
+      const files = Array.from(chatState.selectedFile);
+      const avgSize = files.reduce((sum, f) => sum + f.size, 0) / files.length / 1024; // KB
+      const formats = [...new Set(files.map(f => f.type.split('/')[1]))];
+      
+      // Update file pattern learning
+      setChatState(prev => ({
+        ...prev,
+        userProfile: {
+          ...prev.userProfile,
+          filePatterns: {
+            avgFileSize: avgSize,
+            commonFormats: formats,
+            lastUploadCount: files.length
+          }
+        }
+      }));
+      
+      // Smart suggestions based on file size
+      if (avgSize > 2000 && intent === 'general') {
+        intent = 'compression';
+        suggestions.unshift({
+          tool: 'Smart Compression',
+          reason: `📊 Large files detected (avg ${(avgSize/1024).toFixed(1)}MB) - Compression recommended`,
+          smart: true
+        });
+      }
+    }
+    
+    return { intent, suggestions };
+  }, []);
+
+  // Enhanced send message with intelligent context tracking + Smart Learning
   const sendChatMessage = useCallback(async (message) => {
     if (!message.trim()) return;
+
+    // Analyze intent before sending
+    const { intent, suggestions } = analyzeUserIntent(message);
+    
+    // ADVANCED: Track interaction patterns
+    const interactionTime = new Date().getHours();
+    setChatState(prev => ({
+      ...prev,
+      userProfile: {
+        ...prev.userProfile,
+        interactionPatterns: {
+          ...prev.userProfile.interactionPatterns,
+          peakHours: [...(prev.userProfile.interactionPatterns?.peakHours || []), interactionTime]
+        }
+      }
+    }));
 
     const userMessage = {
       id: Date.now(),
@@ -206,15 +951,45 @@ What processing would you like me to perform?`,
       content: message,
       timestamp: new Date()
     };
-    setChatState(prev => ({ ...prev, messages: [...prev.messages, userMessage], note: '' }));
+    
+    // Update context with detected intent and suggestions
+    setChatState(prev => ({ 
+      ...prev, 
+      messages: [...prev.messages, userMessage], 
+      note: '',
+      userIntent: intent,
+      suggestedTools: suggestions,
+      conversationContext: {
+        ...prev.conversationContext,
+        lastIntent: intent,
+        lastMessage: message,
+        fileCount: prev.selectedFile?.length || 0
+      }
+    }));
+    
     setUiState(prev => ({ ...prev, isTyping: true }));
 
     try {
-      // Include file information if files are selected
+      // Build enriched context for AI
       let contextMessage = message;
+      
+      // Add file context
       if (chatState.selectedFile && chatState.selectedFile.length > 0) {
-        const fileInfo = Array.from(chatState.selectedFile).map(f => `${f.name} (${f.type}, ${(f.size / 1024).toFixed(1)}KB)`).join(', ');
-        contextMessage += `\n\n[User has uploaded ${chatState.selectedFile.length} files: ${fileInfo}]`;
+        const fileInfo = Array.from(chatState.selectedFile).map(f => 
+          `${f.name} (${f.type}, ${(f.size / 1024).toFixed(1)}KB)`
+        ).join(', ');
+        contextMessage += `\n\n[Context: User has ${chatState.selectedFile.length} file(s) uploaded: ${fileInfo}]`;
+      }
+
+      // Add detected intent context
+      if (suggestions.length > 0) {
+        contextMessage += `\n[Detected Intent: ${intent}]`;
+        contextMessage += `\n[Suggested Tools: ${suggestions.map(s => s.tool).join(', ')}]`;
+      }
+
+      // Add conversation history context
+      if (chatState.conversationContext.lastIntent) {
+        contextMessage += `\n[Previous Intent: ${chatState.conversationContext.lastIntent}]`;
       }
 
       const response = await fetch(`${config.API_BASE_URL}/api/chatgpt/chat`, {
@@ -224,17 +999,128 @@ What processing would you like me to perform?`,
         },
         body: JSON.stringify({
           message: contextMessage,
-          conversationHistory: chatState.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+          conversationHistory: chatState.messages.slice(-10).map(m => ({ 
+            role: m.role, 
+            content: m.content 
+          }))
         })
       });
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Enhanced AI response with tool suggestions + Smart Learning
+        let aiResponse = data.response;
+        
+        // Check for direct tool execution request
+        const executableSugs = suggestions.filter(s => s.executable);
+        const showToolListAction = suggestions.find(s => s.action === 'showToolList');
+        
+        if (showToolListAction) {
+          // Show all available tools
+          showAllTools();
+          return;
+        }
+        
+        if (executableSugs.length > 0 && chatState.selectedFile && chatState.selectedFile.length > 0) {
+          // Execute tool directly if user uploaded image and gave clear command
+          const toolToExecute = executableSugs[0];
+          await executeToolDirectly(toolToExecute.tool, toolToExecute.params || {});
+          return;
+        }
+        
+        // Enhanced AI response with tool suggestions + Smart Learning
+        const { preferredTools, commonTasks, skillLevel, successfulWorkflows, quickActions } = chatState.userProfile;
+        const totalInteractions = Object.values(preferredTools || {}).reduce((sum, t) => sum + t.count, 0);
+        
+        // NEW: Skill-adaptive responses (different detail levels for different users)
+        const isExpert = skillLevel === 'expert';
+        const isIntermediate = skillLevel === 'intermediate';
+        
+        // Show advanced insights for returning users
+        if (totalInteractions >= 5 && suggestions.length > 0) {
+          const predictiveSugs = suggestions.filter(s => s.predictive);
+          const personalizedSugs = suggestions.filter(s => s.personalized && !s.predictive);
+          const smartSugs = suggestions.filter(s => s.smart);
+          const workflowSugs = suggestions.filter(s => s.workflow);
+          
+          // NEW: Show predictive suggestions first (AI's predictions)
+          if (predictiveSugs.length > 0) {
+            aiResponse += `\n\n**🔮 AI Predictions (Based on your patterns):**\n`;
+            predictiveSugs.slice(0, 2).forEach((s, i) => {
+              if (s.tool) {
+                aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}`;
+                if (s.params && Object.keys(s.params).length > 0 && isExpert) {
+                  aiResponse += ` \`${JSON.stringify(s.params)}\``;
+                }
+                aiResponse += `\n`;
+              } else if (s.workflow) {
+                aiResponse += `${i + 1}. **Quick Workflow:** ${s.tools.join(' → ')} - ${s.reason}\n`;
+              }
+            });
+          }
+          
+          // Show favorite tools
+          if (personalizedSugs.length > 0) {
+            aiResponse += `\n**⭐ Your Top Tools (${totalInteractions} total uses):**\n`;
+            personalizedSugs.slice(0, 2).forEach((s, i) => {
+              aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
+            });
+          }
+          
+          // NEW: Show successful workflows with success rate
+          if (successfulWorkflows && successfulWorkflows.length > 0) {
+            const topWorkflow = successfulWorkflows.sort((a, b) => b.count - a.count)[0];
+            if (topWorkflow.count >= 2) {
+              aiResponse += `\n**🏆 Proven Workflow:** ${topWorkflow.pattern} \n*Success: ${topWorkflow.count}x | Last used: ${new Date(topWorkflow.lastUsed).toLocaleDateString()}*\n`;
+            }
+          }
+          
+          // NEW: Quick actions for expert users
+          if (isExpert && quickActions && quickActions.length > 0) {
+            aiResponse += `\n**⚡ Quick Actions Available:**\n`;
+            quickActions.slice(0, 2).forEach((qa, i) => {
+              aiResponse += `${i + 1}. **${qa.name}** - Used ${qa.frequency}x\n`;
+            });
+          }
+          
+          // Smart file-based suggestions
+          if (smartSugs.length > 0) {
+            aiResponse += `\n**🧠 Smart Analysis:**\n`;
+            smartSugs.slice(0, 2).forEach((s, i) => {
+              aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
+            });
+          }
+          
+          // NEW: Skill-based tips
+          if (isIntermediate) {
+            aiResponse += `\n💡 *Tip: You're at intermediate level! Try batch processing for efficiency.*`;
+          } else if (isExpert) {
+            aiResponse += `\n🎓 *Expert mode active! I'll provide advanced parameter suggestions.*`;
+          }
+        } else if (suggestions.length > 0) {
+          // Beginner-friendly suggestions
+          aiResponse += `\n\n**🎯 Recommended for You:**\n`;
+          suggestions.slice(0, 3).forEach((s, i) => {
+            if (s.tool) {
+              aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
+            }
+          });
+          aiResponse += `\n🌟 *I'm learning your preferences! The more you use, the smarter I get.*`;
+        } else if (executableSugs.length > 0) {
+          aiResponse += `\n\n**⚡ Quick Execute:** Upload an image and say "go" or "process" to execute **${executableSugs[0].tool}** immediately!`;
+        }
+        
+        if (suggestions.length > 0) {
+          aiResponse += `\n\n💡 *Upload images to get started! Say "go" or "use [tool name]" to process.*`;
+        }
+
         const aiMessage = {
           id: Date.now(),
           role: 'assistant',
-          content: data.response,
-          timestamp: new Date()
+          content: aiResponse,
+          timestamp: new Date(),
+          suggestions // Store suggestions with message
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, aiMessage] }));
       } else {
@@ -242,7 +1128,7 @@ What processing would you like me to perform?`,
         const errorMessage = {
           id: Date.now(),
           role: 'assistant',
-          content: `❌ **Error:** ${errorData.error}\n\nPlease check your OpenAI API key configuration.`,
+          content: `**Error:** ${errorData.error}\n\nPlease check your OpenAI API key configuration in backend/.env`,
           timestamp: new Date()
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage] }));
@@ -251,14 +1137,14 @@ What processing would you like me to perform?`,
       const errorMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: '🔌 **Connection Error**\n\nI\'m having trouble connecting. Please check your internet connection and try again.',
+        content: '**Connection Error**\n\nI\'m having trouble connecting to the server. Please check your internet connection and ensure the backend is running.',
         timestamp: new Date()
       };
       setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage] }));
     } finally {
       setUiState(prev => ({ ...prev, isTyping: false }));
     }
-  }, [chatState.selectedFile, chatState.messages]);
+  }, [chatState.selectedFile, chatState.messages, chatState.conversationContext, chatState.userProfile, analyzeUserIntent, getPersonalizedRecommendations, executeToolDirectly, showAllTools]);
 
   // Voice Commands - send to AI chat
   useEffect(() => {
@@ -272,12 +1158,112 @@ What processing would you like me to perform?`,
     const files = event.target.files;
     if (files && files.length > 0) {
       const fileNames = Array.from(files).map(f => f.name).join(', ');
+      
+      // ULTRA-ADVANCED: Intelligent file analysis + predictive workflow
+      const filesArray = Array.from(files);
+      const avgSize = filesArray.reduce((sum, f) => sum + f.size, 0) / files.length / 1024; // KB
+      const formats = [...new Set(filesArray.map(f => f.type.split('/')[1] || 'unknown'))];
+      const totalSize = filesArray.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024; // MB
+      const minSize = Math.min(...filesArray.map(f => f.size / 1024));
+      const maxSize = Math.max(...filesArray.map(f => f.size / 1024));
+      
+      // Get predictive recommendations
+      const personalRecs = getPersonalizedRecommendations();
+      const { skillLevel, smartDefaults, successfulWorkflows } = chatState.userProfile;
+      
+      let smartSuggestions = '';
+      let predictedAction = null;
+      
+      // NEW: Predict user's goal based on file characteristics + history
+      if (avgSize > 2000) {
+        predictedAction = 'compression';
+        smartSuggestions += `\n\n**🔮 AI Analysis:** Large files (${(avgSize/1024).toFixed(1)}MB avg, ${(maxSize/1024).toFixed(1)}MB max)`;
+        
+        // Smart compression target based on user's past preferences
+        const compressionDefaults = smartDefaults?.['Smart Compression'] || smartDefaults?.['Compress 100KB'];
+        if (compressionDefaults && compressionDefaults.length > 0) {
+          const lastTarget = compressionDefaults[compressionDefaults.length - 1].params.targetKB;
+          smartSuggestions += `\n⚡ **Predicted Action:** Compress to ${lastTarget}KB (your usual preference)`;
+        } else {
+          smartSuggestions += `\n✨ **AI Suggests:** Compress to 100KB for web, or 50KB for thumbnails`;
+        }
+      } else if (avgSize > 500) {
+        predictedAction = 'optimization';
+        smartSuggestions += `\n\n**🔮 AI Analysis:** Medium files (${avgSize.toFixed(0)}KB avg)`;
+        smartSuggestions += `\n✨ **AI Suggests:** Light compression to 100KB or format optimization`;
+      } else {
+        smartSuggestions += `\n\n**🔮 AI Analysis:** Optimized files (${avgSize.toFixed(0)}KB avg)`;
+      }
+      
+      // Format-specific predictions
+      if (formats.includes('heic')) {
+        predictedAction = 'conversion';
+        smartSuggestions += `\n📱 **HEIC Detected:** iPhone format - High probability you need JPG conversion`;
+      }
+      if (formats.includes('png') && avgSize > 1000) {
+        smartSuggestions += `\n🎨 **PNG Detected:** Consider JPEG conversion to reduce size by ~70%`;
+      }
+      
+      // NEW: Predict workflow based on successful patterns
+      if (successfulWorkflows && successfulWorkflows.length > 0) {
+        const relevantWorkflow = successfulWorkflows.find(w => 
+          w.pattern.toLowerCase().includes(predictedAction || '')
+        );
+        if (relevantWorkflow) {
+          smartSuggestions += `\n\n**🏆 Recommended Workflow (${relevantWorkflow.count}x proven success):**`;
+          relevantWorkflow.tools.forEach((tool, i) => {
+            smartSuggestions += `\n${i + 1}. ${tool}`;
+          });
+        }
+      }
+      
+      // NEW: Show time-based predictions
+      const currentHour = new Date().getHours();
+      const timeBased = personalRecs.find(r => r.priority === 'time-based');
+      if (timeBased) {
+        smartSuggestions += `\n\n**🕐 Time Pattern:** ${timeBased.reason}`;
+      }
+      
+      // Personalized quick actions (skill-adaptive)
+      if (personalRecs.length > 0) {
+        if (skillLevel === 'expert') {
+          smartSuggestions += `\n\n**⚡ Your Quick Actions (Expert Mode):**`;
+        } else {
+          smartSuggestions += `\n\n**⭐ Based on Your History:**`;
+        }
+        personalRecs.slice(0, 3).forEach((rec, i) => {
+          if (rec.tool) {
+            smartSuggestions += `\n${i + 1}. **${rec.tool}** - ${rec.reason}`;
+          } else if (rec.workflow) {
+            smartSuggestions += `\n${i + 1}. **Workflow:** ${rec.tools?.join(' → ') || rec.workflow}`;
+          }
+        });
+      }
+      
+      // NEW: Auto-track this upload for future predictions
+      setChatState(prev => ({
+        ...prev,
+        userProfile: {
+          ...prev.userProfile,
+          filePatterns: {
+            avgFileSize: avgSize,
+            commonFormats: formats,
+            lastUploadCount: files.length,
+            sizeRange: { min: minSize, max: maxSize },
+            timestamp: new Date()
+          },
+          sessionGoals: [...(prev.userProfile.sessionGoals || []), predictedAction].filter(Boolean)
+        }
+      }));
+      
       const fileMessage = {
         id: Date.now(),
         role: 'assistant',
         content: `📁 **Files uploaded successfully!**
 
 **${files.length} file(s):** ${fileNames}
+**Total Size:** ${totalSize.toFixed(2)} MB
+**Formats:** ${formats.join(', ')}${smartSuggestions}
 
 🎯 **What would you like me to do?**
 • Compress to specific size
@@ -297,7 +1283,7 @@ Just tell me your requirements!`,
         messages: [...prev.messages, fileMessage]
       }));
     }
-  }, []);
+  }, [getPersonalizedRecommendations]);
 
   // Remove handleAction - everything goes through AI chat now
 
@@ -454,6 +1440,38 @@ Just tell me your requirements!`,
                 </div>
               </div>
             </div>
+
+            {/* NEW: Processing Indicator */}
+            {uiState.processingTool && (
+              <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/30">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm">
+                  <FaSpinner className="animate-spin" />
+                  <span>Processing with {uiState.processingTool}...</span>
+                </div>
+              </div>
+            )}
+
+            {/* NEW: File Ready Indicator */}
+            {!uiState.processingTool && chatState.selectedFile && chatState.selectedFile.length > 0 && (
+              <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-green-600 dark:text-green-400 font-medium">
+                      ✓ {chatState.selectedFile.length} file(s) ready
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      • Say "go" or "process" to execute
+                    </span>
+                  </div>
+                  <button
+                    onClick={clearSelection}
+                    className="p-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-xs"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
 
             {chatState.selectedFile && chatState.selectedFile.length > 0 && (
               <div className="p-2 border-b border-gray-200 dark:border-gray-700">

@@ -28,24 +28,25 @@ function Home() {
 
   return (
     <>
-      {/* ======= INTRO SECTION ======= */}
+      {/* ======= HEADLINE SECTION (NOT STICKY) ======= */}
       <ScrollEffect animation="fade-down" duration={1000}>
         <section className="text-center px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
           <h2 className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white">
             Chutki Image Tool - Compress & Edit Pictures
           </h2>
           <p className="max-w-2xl lg:max-w-4xl mx-auto text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-300 mt-3 sm:mt-4 lg:mt-6 leading-relaxed px-2">
-            Chutki Image Tool is a collection of online tools like Image Compressor, Image Resize Tool,
-            and Image Conversion Tools (Image to JPG, Image to PNG, etc).
+            Chutki Image Tool is a collection of 100+ online tools like Image Compressor, Image Resize Tool,
+            and Image Conversion Tools (Image to JPG, Image to PNG, HEIC to JPG, Background Removal & More).
           </p>
         </section>
       </ScrollEffect>
 
-      {/* Search */}
-      <section className="sticky top-0 z-40 bg-gradient-to-r from-white/80 via-purple-50/60 to-white/80 dark:from-gray-900/80 dark:via-purple-900/40 dark:to-gray-900/80 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 shadow-lg">
+      {/* ======= STICKY SEARCH BAR ======= */}
+      <div className="sticky top-[72px] z-40 bg-gradient-to-r from-white/95 via-purple-50/80 to-white/95 dark:from-gray-900/95 dark:via-purple-900/50 dark:to-gray-900/95 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 shadow-lg border-b border-purple-200/30 dark:border-purple-500/20">
         {memoizedSearchInput}
-      </section>
+      </div>
 
+      {/* Main Content - Tools Section */}
       <ScrollEffect animation="fade-up" duration={800} delay={200}>
         <ImageTools searchQuery={searchQuery} />
       </ScrollEffect>

@@ -93,12 +93,14 @@ const Login = () => {
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 15 }}
-            whileHover={{ scale: 1.1, rotate: 10 }}
-            className="mx-auto h-20 w-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center mb-6 shadow-lg"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className="mx-auto h-24 w-24 mb-6 flex items-center justify-center"
           >
-            <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+            <img 
+              src="/logo.svg" 
+              alt="CHUTKI Logo" 
+              className="w-full h-full drop-shadow-2xl"
+            />
           </motion.div>
           <motion.h2 
             className="text-3xl font-bold text-gray-900 mb-2"

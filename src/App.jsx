@@ -204,11 +204,11 @@ function AppContent() {
         <div className="relative max-w-7xl mx-auto flex justify-between items-center px-3 sm:px-4 lg:px-6 py-3 sm:py-3 lg:py-4">
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="bg-white/20 backdrop-blur-lg p-1 sm:p-1.5 lg:p-2 rounded-full border border-white/20 animate-logo-glow hover:bg-white/30 transition-all duration-500">
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
+            <img 
+              src="/logo.svg" 
+              alt="CHUTKI Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 drop-shadow-lg hover:scale-110 transition-transform duration-300"
+            />
             <h1 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
               Chutki Image Tools
             </h1>
