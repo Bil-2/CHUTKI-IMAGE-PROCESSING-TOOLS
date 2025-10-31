@@ -299,5 +299,45 @@ export const resizeTools = {
     } catch (error) {
       handleToolError(res, error, 'resize-upsc');
     }
+  },
+
+  'resize-instagram': async (req, res) => {
+    try {
+      if (!validateFile(req, res, 'resize-instagram')) return;
+
+      const processedBuffer = await sharp(req.files[0].buffer)
+        .resize(1080, 1080, { fit: 'cover' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      const filename = `instagram_post_${Date.now()}.jpg`;
+      res.set({
+        'Content-Type': 'image/jpeg',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      });
+      res.send(processedBuffer);
+    } catch (error) {
+      handleToolError(res, error, 'resize-instagram');
+    }
+  },
+
+  'resize-whatsapp': async (req, res) => {
+    try {
+      if (!validateFile(req, res, 'resize-whatsapp')) return;
+
+      const processedBuffer = await sharp(req.files[0].buffer)
+        .resize(500, 500, { fit: 'cover' })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
+      const filename = `whatsapp_dp_${Date.now()}.jpg`;
+      res.set({
+        'Content-Type': 'image/jpeg',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      });
+      res.send(processedBuffer);
+    } catch (error) {
+      handleToolError(res, error, 'resize-whatsapp');
+    }
   }
 };

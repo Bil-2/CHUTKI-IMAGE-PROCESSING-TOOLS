@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ToolLayout from '../shared/ToolLayout';
+import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
 
 const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
@@ -29,7 +30,8 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
   return (
     <>
       {/* Flip Direction Selection */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={0}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Select Flip Direction</h3>
         <div className="space-y-4">
           {flipOptions.map((option) => (
@@ -54,9 +56,11 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
           ))}
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Visual Preview */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={100}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Flip Preview</h3>
         <div className="flex items-center justify-center space-x-8">
           <div className="text-center">
@@ -81,9 +85,11 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
           </div>
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Settings Summary */}
       {selectedFile && (
+        <ScrollEffect animation="fade-up" duration={600} delay={200}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Flip Settings</h3>
           <div className="space-y-2 text-sm">
@@ -103,9 +109,11 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Process Button */}
+      <ScrollEffect animation="scale-up" duration={500} delay={250}>
       <motion.button
         onClick={handleSubmit}
         disabled={!selectedFile || loading}
@@ -125,9 +133,11 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
           `Flip Image ${direction === 'horizontal' ? 'Horizontally' : 'Vertically'}`
         )}
       </motion.button>
+      </ScrollEffect>
 
       {/* Use Cases */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <ScrollEffect animation="fade-up" duration={600} delay={300}>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-800 mb-2">Common Use Cases:</h4>
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• <strong>Horizontal:</strong> Fix selfies, create mirror effects</li>
@@ -136,6 +146,7 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
           <li>• No quality loss - completely reversible</li>
         </ul>
       </div>
+      </ScrollEffect>
     </>
   );
 };

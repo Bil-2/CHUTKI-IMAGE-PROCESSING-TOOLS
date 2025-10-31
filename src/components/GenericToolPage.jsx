@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toolsConfig } from "../toolsConfig";
+import ScrollEffect from "./shared/ScrollEffect";
 
 const GenericToolPage = () => {
   const navigate = useNavigate();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toolsConfig } from "../toolsConfig";
+import ScrollEffect from "./shared/ScrollEffect";
 
 const tools = toolsConfig;
 
@@ -75,49 +76,113 @@ const ImageTools = ({ searchQuery }) => {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
       {/* Privacy Notice with fade-out */}
-      <PrivacyNotice />
+      <ScrollEffect animation="fade-down" duration={600}>
+        <PrivacyNotice />
+      </ScrollEffect>
 
-      {Object.keys(filteredTools).map((category) => (
-        <div key={category} className="mb-8 sm:mb-12">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
-            {category}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {filteredTools[category].map((tool, index) => (
-              <Link
-                key={index}
-                to={getToolLink(tool.name)}
-                className="group bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-5 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white text-lg font-bold group-hover:scale-110 transition-transform duration-300">
-                    {tool.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 truncate">
-                      {tool.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {tool.description || "Click to use"}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+      {Object.keys(filteredTools).map((category, categoryIndex) => (
+        <ScrollEffect 
+          key={category} 
+          animation="fade-up" 
+          duration={400} 
+          delay={Math.min(categoryIndex * 30, 150)}
+        >
+          <div className="mb-10 sm:mb-14 lg:mb-16">
+            {/* Category Header */}
+            <div className="mb-6 sm:mb-8">
+              <div className="flex items-center gap-3 sm:gap-4 mb-2">
+                <div className="h-1.5 w-10 sm:w-14 lg:w-16 bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 rounded-full"></div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white">
+                  {category}
+                </h2>
+              </div>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 ml-14 sm:ml-18 lg:ml-20">
+                {filteredTools[category].length} tool{filteredTools[category].length !== 1 ? 's' : ''} available
+              </p>
+            </div>
+
+            {/* Tool Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6">
+              {filteredTools[category].map((tool, index) => (
+                <ScrollEffect 
+                  key={index}
+                  animation="zoom-in" 
+                  duration={300} 
+                  delay={Math.min(index * 15, 100)}
+                >
+                  <Link
+                    to={getToolLink(tool.name)}
+                    className="group relative bg-white dark:bg-gray-800 rounded-2xl p-5 sm:p-6 shadow-md hover:shadow-2xl transition-all duration-300 hover:scale-105 border-2 border-gray-100 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 overflow-hidden h-full flex flex-col"
+                  >
+                    {/* Animated gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-100 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+                    
+                    {/* Decorative corner element */}
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/10 to-pink-400/10 dark:from-purple-600/20 dark:to-pink-600/20 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    
+                    {/* Content Container */}
+                    <div className="relative flex flex-col items-center text-center flex-1">
+                      {/* Icon Container with Badge */}
+                      <div className="relative mb-4">
+                        <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold shadow-lg group-hover:shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                          {tool.name.charAt(0)}
+                        </div>
+                        {/* Pulse animation ring */}
+                        <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 opacity-0 group-hover:opacity-75 group-hover:scale-125 transition-all duration-500"></div>
+                      </div>
+                      
+                      {/* Tool Name */}
+                      <div className="flex-1 w-full mb-3">
+                        <h3 className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 leading-snug px-1">
+                          {tool.name}
+                        </h3>
+                      </div>
+                      
+                      {/* Description */}
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed px-1 min-h-[2.5rem]">
+                        {tool.description || "Professional tool for image processing"}
+                      </p>
+                      
+                      {/* Action Button */}
+                      <div className="mt-4 w-full">
+                        <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-600 dark:to-pink-600 text-white rounded-lg text-xs sm:text-sm font-semibold opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                          <span>Open Tool</span>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </ScrollEffect>
+              ))}
+            </div>
           </div>
-        </div>
+        </ScrollEffect>
       ))}
 
       {Object.keys(filteredTools).length === 0 && searchQuery && (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            No tools found
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">Try searching for something else</p>
-        </div>
+        <ScrollEffect animation="bounce" duration={800}>
+          <div className="text-center py-16 sm:py-20">
+            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center">
+              <svg className="w-16 h-16 text-purple-500 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+              No tools found
+            </h3>
+            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-6">Try searching with different keywords</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
+            >
+              View All Tools
+            </button>
+          </div>
+        </ScrollEffect>
       )}
     </div>
   );

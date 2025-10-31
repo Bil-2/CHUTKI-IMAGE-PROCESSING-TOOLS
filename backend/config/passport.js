@@ -70,11 +70,11 @@ if (shouldEnableGoogleOAuth) {
       return done(error, null);
     }
   }));
-  console.log('✅ Google OAuth strategy initialized');
+  console.log('[SUCCESS] Google OAuth strategy initialized');
 } else if (!User) {
-  console.log('📝 Google OAuth disabled - Running in standalone mode (no database)');
+  console.log('[INFO] Google OAuth disabled - Running in standalone mode (no database)');
 } else {
-  console.log('⚠️  Google OAuth disabled - No valid credentials provided');
+  console.log('[WARNING] Google OAuth disabled - No valid credentials provided');
 }
 
 // Serialize user for session - only if database is connected

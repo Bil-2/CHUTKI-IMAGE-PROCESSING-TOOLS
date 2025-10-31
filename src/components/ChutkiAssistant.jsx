@@ -39,7 +39,7 @@ const ChutkiAssistant = React.memo(() => {
   const welcomeMessage = useMemo(() => ({
     id: Date.now(),
     role: 'assistant',
-    content: '👋 **Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
+    content: '**Welcome to Chutki AI!**\n\nI\'m your intelligent image processing assistant. I can compress images (2MB, 500KB, 100KB), convert formats (HEIC→JPG, PNG→JPEG), remove backgrounds, create passport photos, extract text (OCR), and create PDFs.\n\n**Just upload your images and tell me what you need!** ',
     timestamp: new Date()
   }), []);
 
@@ -70,7 +70,11 @@ const ChutkiAssistant = React.memo(() => {
       const fileMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: `📁 **Files dropped successfully!**\n\n**${files.length} file(s):** ${fileNames}\n\nWhat processing would you like me to perform?`,
+        content: `**Files dropped successfully!**
+
+**${files.length} file(s):** ${fileNames}
+
+What processing would you like me to perform?`,
         timestamp: new Date()
       };
       setChatState(prev => ({
@@ -96,7 +100,7 @@ const ChutkiAssistant = React.memo(() => {
     const welcomeMessage = {
       id: Date.now(),
       role: 'assistant',
-      content: '🧹 **Chat cleared!** How can I help you with image processing today?',
+      content: '**Chat cleared!** How can I help you with image processing today?',
       timestamp: new Date()
     };
     setChatState(prev => ({ ...prev, messages: [welcomeMessage] }));
@@ -137,8 +141,8 @@ const ChutkiAssistant = React.memo(() => {
   // Optimized typewriter effect with smoother performance
   useEffect(() => {
     const introMessages = [
-      "Hello! 👋",
-      "I'm Chutki Assistant 🌸",
+      "Hello!",
+      "I'm Chutki Assistant",
       "How can I help you today ?",
       "ChatGPT Powered Assistant"
     ];
@@ -271,7 +275,20 @@ const ChutkiAssistant = React.memo(() => {
       const fileMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: `📁 **Files uploaded successfully!**\n\n**${files.length} file(s):** ${fileNames}\n\n🎯 **What would you like me to do?**\n• Compress to specific size\n• Resize dimensions\n• Convert format\n• Extract text (OCR)\n• Remove background\n• Create PDF\n• Generate passport photos\n\nJust tell me your requirements!`,
+        content: `📁 **Files uploaded successfully!**
+
+**${files.length} file(s):** ${fileNames}
+
+🎯 **What would you like me to do?**
+• Compress to specific size
+• Resize dimensions
+• Convert format
+• Extract text (OCR)
+• Remove background
+• Create PDF
+• Generate passport photos
+
+Just tell me your requirements!`,
         timestamp: new Date()
       };
       setChatState(prev => ({
@@ -361,7 +378,9 @@ const ChutkiAssistant = React.memo(() => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                    <span className="text-white text-xl">👱🏼‍♀️</span>
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-lg">CHUTKI AI</h3>
@@ -415,15 +434,21 @@ const ChutkiAssistant = React.memo(() => {
                 <div className="flex items-center space-x-4">
                   <span>{time}</span>
                   {chatState.selectedFile && chatState.selectedFile.length > 0 && (
-                    <span className="bg-white/20 px-2 py-1 rounded-full">
-                      📁 {chatState.selectedFile.length} files
+                    <span className="bg-white/20 px-2 py-1 rounded-full flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                      </svg>
+                      {chatState.selectedFile.length} files
                     </span>
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
                   {uiState.isTyping && (
-                    <span className="bg-white/20 px-2 py-1 rounded-full animate-pulse">
-                      ✨ Thinking...
+                    <span className="bg-white/20 px-2 py-1 rounded-full animate-pulse flex items-center gap-1">
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Thinking...
                     </span>
                   )}
                 </div>
@@ -535,7 +560,9 @@ const ChutkiAssistant = React.memo(() => {
                     {msg.role === 'assistant' && (
                       <div className="flex items-center space-x-2 mb-2">
                         <div className="w-7 h-7 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm">👱🏼‍♀️</span>
+                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
                         </div>
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Chutki AI</span>
                       </div>

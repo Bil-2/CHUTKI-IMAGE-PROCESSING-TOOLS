@@ -72,11 +72,11 @@ router.post('/:tool', uploadAny, async (req, res) => {
   try {
     const { tool } = req.params;
 
-    console.log(`🔧 Processing tool: ${tool}`);
-    console.log(`📁 File received: ${req.files ? req.files[0].originalname : 'No file'}`);
+    console.log(`[TOOL] Processing tool: ${tool}`);
+    console.log(`[FILE] File received: ${req.files ? req.files[0].originalname : 'No file'}`);
 
     if (!req.files || req.files.length === 0) {
-      console.log('❌ No file provided');
+      console.log('[ERROR] No file provided');
       return res.status(400).json({ error: 'No image file provided' });
     }
 

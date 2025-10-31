@@ -324,6 +324,6 @@ const generateAllComponents = () => {
 };
 
 // Run the generator
-console.log('🚀 Starting tool component generation...');
+console.log('[START] Starting tool component generation...');
 const generatedTools = generateAllComponents();
 console.log(`\n🎉 Successfully generated ${generatedTools.length} tool components!`);

@@ -252,6 +252,25 @@ export const editingTools = {
     }
   },
 
+  'check-dpi': async (req, res) => {
+    try {
+      if (!validateFile(req, res, 'check-dpi')) return;
+
+      const metadata = await sharp(req.files[0].buffer).metadata();
+      
+      res.json({
+        dpi: metadata.density || 72,
+        width: metadata.width,
+        height: metadata.height,
+        format: metadata.format,
+        size: req.files[0].size,
+        message: `Image DPI: ${metadata.density || 72}`
+      });
+    } catch (error) {
+      handleToolError(res, error, 'check-dpi');
+    }
+  },
+
   'pdf-to-jpg': async (req, res) => {
     try {
       if (!validateFile(req, res, 'pdf-to-jpg')) return;
@@ -291,6 +310,67 @@ export const editingTools = {
       });
     } catch (error) {
       handleToolError(res, error, 'jpg-to-text');
+    }
+  },
+
+  'pixelate': async (req, res) => {
+    try {
+      if (!validateFile(req, res, 'pixelate')) return;
+
+      const { intensity = 10 } = req.body;
+      const metadata = await sharp(req.files[0].buffer).metadata();
+      const factor = parseInt(intensity) || 10;
+
+      const processedBuffer = await sharp(req.files[0].buffer)
+        .resize(Math.floor(metadata.width / factor), Math.floor(metadata.height / factor), {
+          kernel: 'nearest'
+        })
+        .resize(metadata.width, metadata.height, { kernel: 'nearest' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      const filename = `pixelated_${Date.now()}.jpg`;
+      res.set({
+        'Content-Type': 'image/jpeg',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      });
+      res.send(processedBuffer);
+    } catch (error) {
+      handleToolError(res, error, 'pixelate');
+    }
+  },
+
+  'signature': async (req, res) => {
+    try {
+      if (!validateFile(req, res, 'signature')) return;
+
+      const { width = 300, height = 100, enhance = 'true' } = req.body;
+      const targetWidth = parseInt(width);
+      const targetHeight = parseInt(height);
+
+      let image = sharp(req.files[0].buffer)
+        .resize(targetWidth, targetHeight, { fit: 'inside', background: '#FFFFFF' })
+        .flatten({ background: '#FFFFFF' });
+
+      if (enhance === 'true') {
+        image = image
+          .normalize()
+          .sharpen()
+          .modulate({ brightness: 1.1, saturation: 0.9 });
+      }
+
+      const processedBuffer = await image
+        .jpeg({ quality: 95 })
+        .toBuffer();
+
+      const filename = `signature_${Date.now()}.jpg`;
+      res.set({
+        'Content-Type': 'image/jpeg',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      });
+      res.send(processedBuffer);
+    } catch (error) {
+      handleToolError(res, error, 'signature');
     }
   }
 };

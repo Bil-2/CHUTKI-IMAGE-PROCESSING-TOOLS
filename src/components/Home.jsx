@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import ImageTools from "./ImageTools";
 import ChutkiAssistant from "./ChutkiAssistant";
 import Footer from "./Footer";
+import ScrollEffect from "./shared/ScrollEffect";
 
 function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -28,24 +29,34 @@ function Home() {
   return (
     <>
       {/* ======= INTRO SECTION ======= */}
-      <section className="text-center px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
-        <h2 className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white animate-fade-up">
-          Chutki Image Tool - Compress & Edit Pictures
-        </h2>
-        <p className="max-w-2xl lg:max-w-4xl mx-auto text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-300 mt-3 sm:mt-4 lg:mt-6 leading-relaxed animate-fade-up-delay px-2">
-          Chutki Image Tool is a collection of online tools like Image Compressor, Image Resize Tool,
-          and Image Conversion Tools (Image to JPG, Image to PNG, etc).
-        </p>
-      </section>
+      <ScrollEffect animation="fade-down" duration={1000}>
+        <section className="text-center px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+          <h2 className="text-lg sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white">
+            Chutki Image Tool - Compress & Edit Pictures
+          </h2>
+          <p className="max-w-2xl lg:max-w-4xl mx-auto text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-300 mt-3 sm:mt-4 lg:mt-6 leading-relaxed px-2">
+            Chutki Image Tool is a collection of online tools like Image Compressor, Image Resize Tool,
+            and Image Conversion Tools (Image to JPG, Image to PNG, etc).
+          </p>
+        </section>
+      </ScrollEffect>
 
       {/* Search */}
       <section className="sticky top-0 z-40 bg-gradient-to-r from-white/80 via-purple-50/60 to-white/80 dark:from-gray-900/80 dark:via-purple-900/40 dark:to-gray-900/80 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 shadow-lg">
         {memoizedSearchInput}
       </section>
 
-      <ImageTools searchQuery={searchQuery} />
-      <ChutkiAssistant />
-      <Footer />
+      <ScrollEffect animation="fade-up" duration={800} delay={200}>
+        <ImageTools searchQuery={searchQuery} />
+      </ScrollEffect>
+      
+      <ScrollEffect animation="fade-up" duration={800} delay={400}>
+        <ChutkiAssistant />
+      </ScrollEffect>
+      
+      <ScrollEffect animation="fade-up" duration={800} delay={600}>
+        <Footer />
+      </ScrollEffect>
     </>
   );
 }

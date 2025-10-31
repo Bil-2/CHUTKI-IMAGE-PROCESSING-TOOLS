@@ -34,6 +34,7 @@ import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.j
 import authRoutes from "./routes/auth.js";
 import modularToolsRoutes from "./api/modular-tools.js";
 import chatgptRoutes from "./api/chatgpt.js";
+import aiChatRoutes from "./api/ai-chat.js";
 
 // Validate environment configuration
 const { errors, warnings } = validateEnvironment();
@@ -73,7 +74,7 @@ app.use(compression());
 // Rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 500, // limit each IP to 500 requests per windowMs
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: '15 minutes'
@@ -84,7 +85,7 @@ const generalLimiter = rateLimit({
 
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 uploads per windowMs
+  max: 100, // limit each IP to 100 uploads per windowMs
   message: {
     error: 'Too many file uploads from this IP, please try again later.',
     retryAfter: '15 minutes'
@@ -192,7 +193,7 @@ const cleanupOldFiles = () => {
     });
 
     if (deletedCount > 0) {
-      console.log(`🧹 Cleaned up ${deletedCount} old files`);
+      console.log(`[CLEANUP] Cleaned up ${deletedCount} old files`);
     }
   } catch (error) {
     console.error('🚨 Cleanup error:', error.message);
@@ -204,7 +205,7 @@ setInterval(cleanupOldFiles, cleanupInterval);
 
 // Initial cleanup
 cleanupOldFiles();
-console.log(`🧹 Cleanup completed. 0 files checked.`);
+console.log(`[CLEANUP] Cleanup completed. 0 files checked.`);
 
 // Static files with security headers
 app.use("/uploads", (req, res, next) => {
@@ -224,6 +225,9 @@ app.use('/api/auth', authRoutes);
 
 // ChatGPT API routes
 app.use('/api/chatgpt', chatgptRoutes);
+
+// AI Chat routes
+app.use('/api/ai', aiChatRoutes);
 
 // Use modular tools router
 app.use('/api/tools', modularToolsRoutes);
@@ -321,7 +325,7 @@ const gracefulShutdown = (signal) => {
 
   // Close server
   server.close(() => {
-    console.log('🔒 HTTP server closed');
+    console.log('[SERVER] HTTP server closed');
 
     // Close database connection
     if (mongoose.connection.readyState === 1) {
@@ -348,11 +352,11 @@ const startServer = async () => {
     await connectDB();
 
     const server = app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Frontend URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
-      console.log(`🔗 Backend URL: http://localhost:${PORT}`);
-      console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🔒 Privacy Notice: Images are automatically deleted after 30 minutes`);
+      console.log(`[START] Server running on port ${PORT}`);
+      console.log(`[FRONTEND] Frontend URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
+      console.log(`[BACKEND] Backend URL: http://localhost:${PORT}`);
+      console.log(`[HEALTH] Health check: http://localhost:${PORT}/api/health`);
+      console.log(`[PRIVACY] Privacy Notice: Images are automatically deleted after 30 minutes`);
     });
 
     // Graceful shutdown handlers

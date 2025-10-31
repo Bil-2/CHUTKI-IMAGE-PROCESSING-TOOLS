@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ToolLayout from '../shared/ToolLayout';
+import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
 
 const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
@@ -31,7 +32,8 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
   return (
     <>
       {/* Preset Angles */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={0}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Quick Rotation</h3>
         <div className="grid grid-cols-2 gap-3">
           {presetAngles.map((preset) => (
@@ -48,9 +50,11 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
           ))}
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Custom Angle */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={100}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Custom Angle</h3>
         <div className="space-y-4">
           <div>
@@ -87,9 +91,11 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
           </div>
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Background Color */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={150}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Background Fill</h3>
         <div className="grid grid-cols-2 gap-3">
           {backgroundOptions.map((option) => (
@@ -116,9 +122,11 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
           Background color fills empty areas created by rotation
         </p>
       </div>
+      </ScrollEffect>
 
       {/* Rotation Preview */}
       {selectedFile && (
+        <ScrollEffect animation="fade-up" duration={600} delay={200}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Rotation Preview</h3>
           <div className="space-y-2 text-sm">
@@ -138,9 +146,11 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Process Button */}
+      <ScrollEffect animation="scale-up" duration={500} delay={250}>
       <motion.button
         onClick={handleSubmit}
         disabled={!selectedFile || loading}
@@ -160,9 +170,11 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
           'Rotate Image'
         )}
       </motion.button>
+      </ScrollEffect>
 
       {/* Tips */}
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <ScrollEffect animation="fade-up" duration={600} delay={300}>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
         <h4 className="font-semibold text-orange-800 mb-2">Rotation Tips:</h4>
         <ul className="text-sm text-orange-700 space-y-1">
           <li>• Positive angles rotate clockwise</li>
@@ -171,6 +183,7 @@ const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
           <li>• White background works best for documents</li>
         </ul>
       </div>
+      </ScrollEffect>
     </>
   );
 };

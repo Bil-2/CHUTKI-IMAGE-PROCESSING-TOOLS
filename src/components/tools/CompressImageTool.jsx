@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ToolLayout from '../shared/ToolLayout';
+import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
 
 const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
@@ -57,7 +58,8 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
   return (
     <>
       {/* Compression Type Selection */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={0}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Compression Method</h3>
         <div className="space-y-3">
           <label className="flex items-center space-x-3 cursor-pointer">
@@ -88,9 +90,11 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
           </label>
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Quality-based Settings */}
       {compressionType === 'quality' && (
+        <ScrollEffect animation="fade-up" duration={600} delay={100}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Quality Presets</h3>
           <div className="grid grid-cols-1 gap-2 mb-4">
@@ -127,10 +131,12 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Size-based Settings */}
       {compressionType === 'size' && (
+        <ScrollEffect animation="fade-up" duration={600} delay={100}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Size Presets</h3>
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -173,10 +179,12 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Compression Preview */}
       {selectedFile && (
+        <ScrollEffect animation="fade-up" duration={600} delay={200}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Compression Preview</h3>
           <div className="space-y-2 text-sm">
@@ -203,9 +211,11 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Process Button */}
+      <ScrollEffect animation="scale-up" duration={500} delay={250}>
       <motion.button
         onClick={handleSubmit}
         disabled={!selectedFile || loading}
@@ -225,9 +235,11 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
           'Compress Image'
         )}
       </motion.button>
+      </ScrollEffect>
 
       {/* Tips */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <ScrollEffect animation="fade-up" duration={600} delay={300}>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <h4 className="font-semibold text-yellow-800 mb-2">Compression Tips:</h4>
         <ul className="text-sm text-yellow-700 space-y-1">
           <li>• JPEG works best for photos with many colors</li>
@@ -236,6 +248,7 @@ const CompressImageSettings = ({ selectedFile, loading, onSubmit }) => {
           <li>• Size-based compression ensures exact file size</li>
         </ul>
       </div>
+      </ScrollEffect>
     </>
   );
 };

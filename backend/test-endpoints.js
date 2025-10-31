@@ -81,7 +81,7 @@ const testImageUpload = async (endpoint, additionalFields = {}) => {
 };
 
 const runTests = async () => {
-  log('🚀 Starting CHUTKI API Endpoint Tests', 'info');
+  log('[START] Starting CHUTKI API Endpoint Tests', 'info');
   log('=' * 50, 'info');
 
   const results = {
@@ -197,7 +197,7 @@ const runTests = async () => {
 
   // 4. Protected Route Tests (if auth token available)
   if (authToken) {
-    log('\n🔒 Testing Protected Endpoints...', 'info');
+    log('\n[PROTECTED] Testing Protected Endpoints...', 'info');
 
     await test('User Profile', () => testEndpoint('Profile', '/api/auth/me', {
       headers: { 'Authorization': `Bearer ${authToken}` }

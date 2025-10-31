@@ -6,8 +6,8 @@ const connectDB = async () => {
     const shouldConnectMongoDB = process.env.ENABLE_MONGODB === 'true' || process.env.MONGODB_URI;
 
     if (!shouldConnectMongoDB) {
-      console.log('📝 Running in standalone mode (no database)');
-      console.log('💡 To enable MongoDB: Set ENABLE_MONGODB=true or provide MONGODB_URI');
+      console.log('[INFO] Running in standalone mode (no database)');
+      console.log('[TIP] To enable MongoDB: Set ENABLE_MONGODB=true or provide MONGODB_URI');
       global.DATABASE_CONNECTED = false;
       return null;
     }
@@ -35,39 +35,39 @@ const connectDB = async () => {
 
     for (const uri of mongoURIs) {
       try {
-        console.log(`🔄 Attempting MongoDB connection to: ${uri.replace(/\/\/.*@/, '//***:***@')}`);
+        console.log(`[CONNECTING] Attempting MongoDB connection to: ${uri.replace(/\/\/.*@/, '//***:***@')}`);
 
         const conn = await mongoose.connect(uri, options);
 
-        console.log(`✅ MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
-        console.log(`📊 Database: ${conn.connection.name}`);
+        console.log(`[SUCCESS] MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
+        console.log(`[DATABASE] Database: ${conn.connection.name}`);
 
         // Set up connection event listeners
         mongoose.connection.on('error', (err) => {
-          console.error('❌ MongoDB connection error:', err.message);
+          console.error('[ERROR] MongoDB connection error:', err.message);
         });
 
         mongoose.connection.on('disconnected', () => {
-          console.log('⚠️  MongoDB disconnected');
+          console.log('[WARNING] MongoDB disconnected');
         });
 
         mongoose.connection.on('reconnected', () => {
-          console.log('✅ MongoDB reconnected');
+          console.log('[SUCCESS] MongoDB reconnected');
         });
 
         connected = true;
         break;
       } catch (error) {
         lastError = error;
-        console.log(`❌ Failed to connect to ${uri}: ${error.message}`);
+        console.log(`[FAILED] Failed to connect to ${uri}: ${error.message}`);
         continue;
       }
     }
 
     if (!connected) {
-      console.log('⚠️  MongoDB connection failed. Running in standalone mode.');
-      console.log('📝 Note: User authentication and data persistence will be disabled.');
-      console.log('🔧 To fix: Install MongoDB or provide a valid MONGODB_URI');
+      console.log('[WARNING] MongoDB connection failed. Running in standalone mode.');
+      console.log('[NOTE] User authentication and data persistence will be disabled.');
+      console.log('[FIX] To fix: Install MongoDB or provide a valid MONGODB_URI');
 
       // Set a flag to indicate no database
       global.DATABASE_CONNECTED = false;
@@ -78,8 +78,8 @@ const connectDB = async () => {
     return mongoose.connection;
 
   } catch (error) {
-    console.error('❌ Database connection error:', error.message);
-    console.log('⚠️  Continuing without database connection...');
+    console.error('[ERROR] Database connection error:', error.message);
+    console.log('[WARNING] Continuing without database connection...');
     global.DATABASE_CONNECTED = false;
     return null;
   }
@@ -89,7 +89,7 @@ const connectDB = async () => {
 process.on('SIGINT', async () => {
   if (mongoose.connection.readyState === 1) {
     await mongoose.connection.close();
-    console.log('📦 MongoDB connection closed through app termination');
+    console.log('[SHUTDOWN] MongoDB connection closed through app termination');
   }
   process.exit(0);
 });

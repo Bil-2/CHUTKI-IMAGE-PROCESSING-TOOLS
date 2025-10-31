@@ -30,7 +30,7 @@ const User = mongoose.model('User', userSchema);
 
 async function setupAuthentication() {
   try {
-    console.log('🚀 Setting up CHUTKI Authentication System...\n');
+    console.log('[SETUP] Setting up CHUTKI Authentication System...\n');
 
     // Connect to MongoDB
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/chutki';
@@ -89,8 +89,8 @@ async function setupAuthentication() {
     console.log('   Email: admin@chutki.com | Password: admin123');
     console.log('   Email: user@chutki.com  | Password: user123');
     console.log('   Email: demo@chutki.com  | Password: demo123');
-    console.log('\n🔗 Login URL: http://localhost:5173/login');
-    console.log('🔗 Register URL: http://localhost:5173/register');
+    console.log('\n[URL] Login URL: http://localhost:5173/login');
+    console.log('[URL] Register URL: http://localhost:5173/register');
 
   } catch (error) {
     console.error('❌ Setup failed:', error.message);

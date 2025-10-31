@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ToolLayout from '../shared/ToolLayout';
+import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
 
 const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
@@ -43,7 +44,8 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
   return (
     <>
       {/* Preset Sizes */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={0}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Quick Presets</h3>
         <div className="grid grid-cols-1 gap-2">
           {presetSizes.map((preset, index) => (
@@ -58,9 +60,11 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
           ))}
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Custom Dimensions */}
-      <div className="bg-white rounded-lg p-6 shadow-lg">
+      <ScrollEffect animation="fade-up" duration={600} delay={100}>
+        <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Custom Dimensions</h3>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
@@ -122,9 +126,11 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
           </p>
         </div>
       </div>
+      </ScrollEffect>
 
       {/* Preview Info */}
       {selectedFile && (
+        <ScrollEffect animation="fade-up" duration={600} delay={200}>
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Resize Preview</h3>
           <div className="space-y-2 text-sm">
@@ -146,9 +152,11 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
             </div>
           </div>
         </div>
+        </ScrollEffect>
       )}
 
       {/* Process Button */}
+      <ScrollEffect animation="scale-up" duration={500} delay={250}>
       <motion.button
         onClick={handleSubmit}
         disabled={!selectedFile || loading || !width || !height}
@@ -168,9 +176,11 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
           'Resize Image'
         )}
       </motion.button>
+      </ScrollEffect>
 
       {/* Tips */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <ScrollEffect animation="fade-up" duration={600} delay={300}>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <h4 className="font-semibold text-green-800 mb-2">Tips:</h4>
         <ul className="text-sm text-green-700 space-y-1">
           <li>• Maintain aspect ratio to prevent distortion</li>
@@ -179,6 +189,7 @@ const ResizePixelSettings = ({ selectedFile, loading, onSubmit }) => {
           <li>• Consider your intended use case</li>
         </ul>
       </div>
+      </ScrollEffect>
     </>
   );
 };

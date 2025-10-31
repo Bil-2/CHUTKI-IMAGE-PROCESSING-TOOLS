@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import useSmoothScroll from "./hooks/useSmoothScroll";
+import ScrollProgressBar from "./components/shared/ScrollProgressBar";
+import ScrollToTop from "./components/shared/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./components/Login";
 import Register from "./components/Register";
@@ -33,6 +36,9 @@ function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, loading, logout } = useAuth();
+  
+  // Enable smooth scrolling
+  useSmoothScroll();
 
   // Dark mode toggle with localStorage persistence
   useEffect(() => {
@@ -141,6 +147,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+      {/* Scroll Progress Bar */}
+      <ScrollProgressBar />
+      
       {/* Toast Notifications */}
       <Toaster
         position="top-right"
@@ -189,14 +198,16 @@ function AppContent() {
       />
 
       {/* ========= HEADER ========= */}
-      <header className="relative shadow-lg z-50">
+      <header className="relative shadow-lg z-50 sticky top-0">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
 
-        <div className="relative max-w-7xl mx-auto flex justify-between items-center px-2 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4">
+        <div className="relative max-w-7xl mx-auto flex justify-between items-center px-3 sm:px-4 lg:px-6 py-3 sm:py-3 lg:py-4">
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="bg-white/20 backdrop-blur-lg p-1 sm:p-1.5 lg:p-2 rounded-full border border-white/20 animate-logo-glow hover:bg-white/30 transition-all duration-500">
-              <span className="text-2xl sm:text-3xl lg:text-4xl inline-block animate-pulse hover:animate-none hover:scale-125 hover:rotate-12 transform transition-all duration-500 ease-out cursor-pointer">👱🏼‍♀️</span>
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
             <h1 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
               Chutki Image Tools
@@ -204,33 +215,47 @@ function AppContent() {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+            {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="rounded-full p-1.5 sm:p-2 bg-white/30 hover:bg-white/40 backdrop-blur-sm transition-all duration-300 hover:scale-110 text-lg sm:text-xl"
+              className="rounded-full p-2 sm:p-2.5 lg:p-3 bg-white/30 hover:bg-white/40 backdrop-blur-sm transition-all duration-300 hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Toggle Dark Mode"
+              title={darkMode ? "Light Mode" : "Dark Mode"}
             >
-              {darkMode ? "☀️" : "🌙"}
+              {darkMode ? (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+              )}
             </button>
 
+            {/* Logout Button */}
             <button
               onClick={logout}
-              className="group relative rounded-full p-1.5 sm:p-2 lg:p-2.5 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 text-white text-base sm:text-lg lg:text-xl"
+              className="group relative rounded-full p-2 sm:p-2.5 lg:p-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Logout"
               title="Logout"
             >
-              ⏻
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
             </button>
 
+            {/* Menu Button */}
             <button
               onClick={toggleMenu}
-              className="relative flex flex-col justify-center items-center space-y-0.5 sm:space-y-1 lg:space-y-1.5 p-1.5 sm:p-2 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 group"
+              className="relative flex flex-col justify-center items-center gap-1 sm:gap-1.5 p-2 sm:p-2.5 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 group min-w-[44px] min-h-[44px]"
               title="Menu"
               aria-label="Open Menu"
             >
-              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
-              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
-              <span className="block w-4 sm:w-5 lg:w-6 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-5 sm:group-hover:w-6 lg:group-hover:w-7"></span>
+              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
+              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
+              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
             </button>
           </div>
         </div>
@@ -246,7 +271,9 @@ function AppContent() {
           className="absolute top-3 sm:top-4 right-3 sm:right-4 text-white text-xl sm:text-2xl lg:text-3xl hover:text-gray-300 z-10"
           aria-label="Close Menu"
         >
-          ✕
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
 
         <nav className="mt-12 sm:mt-16 lg:mt-20 flex flex-col items-start px-4 sm:px-6 lg:pl-10 space-y-3 sm:space-y-4 lg:space-y-6 text-white text-sm sm:text-base lg:text-lg font-semibold">
@@ -347,6 +374,9 @@ function AppContent() {
         {/* Catch all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+        
+      {/* Scroll to Top Button */}
+      <ScrollToTop />
     </div>
   );
 }
