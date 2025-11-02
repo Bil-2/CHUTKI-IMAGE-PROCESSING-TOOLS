@@ -233,6 +233,20 @@ function AppContent() {
               )}
             </button>
 
+            {/* Profile Button */}
+            {isAuthenticated && (
+              <button
+                onClick={() => navigate('/profile')}
+                className="group relative rounded-full p-2 sm:p-2.5 lg:p-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/40 hover:to-purple-500/40 backdrop-blur-sm border border-white/20 hover:border-indigo-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/25 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label="View Profile"
+                title="Profile"
+              >
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
+
             {/* Logout Button */}
             <button
               onClick={logout}

@@ -136,16 +136,18 @@ const DashboardHeader = ({ user, onLogout }) => (
             </h1>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+            <UserAvatar user={user} />
             <button
               onClick={() => window.location.href = '/profile'}
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              aria-label="Profile"
+              className="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="View Profile"
+              title="View Profile"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
+              <span className="hidden sm:inline text-sm font-medium">Profile</span>
             </button>
-            <UserAvatar user={user} />
             <button
               onClick={onLogout}
               className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors"
