@@ -84,7 +84,7 @@ export const toolsConfig = {
       fields: ["file", "dpi"]
     },
     {
-      name: "Pi7 Bulk Image Resizer",
+      name: "Chutki Bulk Image Resizer",
       route: "/tools/bulk-resize",
       description: "Resize multiple images at once",
       endpoint: `${config.API_BASE_URL}/api/tools/bulk-resize`,

@@ -29,7 +29,7 @@ const ALL_TOOLS = [
   { name: 'Resize YouTube Banner', endpoint: '/api/tools/resize-youtube-banner', params: {} },
   { name: 'Resize Signature 50x20mm', endpoint: '/api/tools/resize-sign-50x20mm', params: {} },
   { name: 'Resize Signature', endpoint: '/api/tools/resize-signature', params: { width: 200, height: 80 } },
-  { name: 'Bulk Resize', endpoint: '/api/tools/bulk-resize', params: { width: 800, height: 600, unit: 'px' } },
+  { name: 'Chutki Bulk Resize', endpoint: '/api/tools/bulk-resize', params: { width: 800, height: 600, unit: 'px' } },
   { name: 'Generate Signature', endpoint: '/api/tools/generate-signature', params: { enhance: 'true' } },
   { name: 'Increase Size KB', endpoint: '/api/tools/increase-size-kb', params: { targetKB: 500 } },
   { name: 'Rotate', endpoint: '/api/tools/rotate', params: { angle: 90 } },
