@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import config from '../config';
+import logoSvg from '../assets/logo.svg';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -62,7 +63,7 @@ const ForgotPassword = () => {
             className="mx-auto h-24 w-24 mb-6 flex items-center justify-center"
           >
             <img 
-              src="/logo.svg" 
+              src={logoSvg} 
               alt="CHUTKI Logo" 
               className="w-full h-full drop-shadow-2xl"
             />

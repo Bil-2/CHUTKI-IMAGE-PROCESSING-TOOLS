@@ -15,6 +15,7 @@ import Dashboard from "./components/Dashboard";
 import ImageTools from "./components/ImageTools";
 import GenericToolPage from "./components/GenericToolPage";
 import AuthSuccess from "./components/AuthSuccess";
+import logoSvg from "./assets/logo.svg";
 
 // Import individual tool components
 import PassportPhotoTool from "./components/tools/PassportPhotoTool";
@@ -210,7 +211,7 @@ function AppContent() {
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
             <img 
-              src="/logo.svg" 
+              src={logoSvg} 
               alt="CHUTKI Logo" 
               className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 drop-shadow-lg hover:scale-110 transition-transform duration-300"
             />

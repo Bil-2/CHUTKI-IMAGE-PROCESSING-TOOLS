@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import toast from 'react-hot-toast';
+import logoSvg from '../assets/logo.svg';
 
 function Footer() {
   const [hoveredTool, setHoveredTool] = useState(null);
@@ -41,7 +42,7 @@ function Footer() {
         <div className="sm:col-span-2">
           <div className="flex items-center gap-3 mb-3">
             <img
-              src="/logo.svg"
+              src={logoSvg}
               alt="CHUTKI Logo"
               className="w-12 h-12 drop-shadow-lg hover:scale-110 hover:rotate-3 transition-transform duration-300"
             />
