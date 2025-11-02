@@ -69,7 +69,10 @@ function AppContent() {
 
     const route = navigationMap[item];
     if (route) {
+      console.log('Navigating to:', route);
       navigate(route);
+    } else {
+      console.log('No route found for:', item);
     }
   };
 
@@ -82,8 +85,11 @@ function AppContent() {
     );
   }
 
-  // If not authenticated, show only login/register routes
-  if (!isAuthenticated) {
+  // Check localStorage as backup before redirecting
+  const token = localStorage.getItem('token');
+  
+  // If not authenticated and no token, show only login/register routes
+  if (!isAuthenticated && !token) {
     return (
       <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
         <Toaster
@@ -247,18 +253,6 @@ function AppContent() {
               </button>
             )}
 
-            {/* Logout Button */}
-            <button
-              onClick={logout}
-              className="group relative rounded-full p-2 sm:p-2.5 lg:p-3 bg-gradient-to-r from-red-500/20 to-pink-500/20 hover:from-red-500/40 hover:to-pink-500/40 backdrop-blur-sm border border-white/20 hover:border-red-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-red-500/25 min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Logout"
-              title="Logout"
-            >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-
             {/* Menu Button */}
             <button
               onClick={toggleMenu}
@@ -384,7 +378,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        {/* Catch all route */}
+        {/* Catch all route - redirect unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
         

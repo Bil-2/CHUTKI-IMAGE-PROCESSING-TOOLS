@@ -6,6 +6,7 @@ import ScrollEffect from "./shared/ScrollEffect";
 import FileUploadZone from "./shared/FileUploadZone";
 
 const GenericToolPage = () => {
+  const { toolName } = useParams();
   const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -18,11 +19,32 @@ const GenericToolPage = () => {
 
   // Memoize tool lookup to prevent excessive re-renders
   const tool = useMemo(() => {
-    const currentPath = window.location.pathname;
-    return Object.values(toolsConfig)
+    if (!toolName) return null;
+    const currentPath = `/tools/${toolName}`;
+    const foundTool = Object.values(toolsConfig)
       .flat()
       .find(t => t.route === currentPath);
-  }, []);
+    
+    // Debug logging to help identify issues
+    if (!foundTool) {
+      console.log('Tool not found for path:', currentPath);
+      console.log('Available tools:', Object.values(toolsConfig).flat().map(t => t.route));
+    }
+    
+    return foundTool;
+  }, [toolName]);
+
+  // Show loading while toolName is being resolved
+  if (!toolName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading tool...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!tool) {
     return (
@@ -32,7 +54,7 @@ const GenericToolPage = () => {
             Tool Not Found
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            The requested tool could not be found.
+            The requested tool "{toolName}" could not be found.
           </p>
           <button
             onClick={() => navigate("/")}

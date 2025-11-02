@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import ToolLayout from '../shared/ToolLayout';
 import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
+import FileUploadZone from '../shared/FileUploadZone';
 
 const RotateImageSettings = ({ selectedFile, loading, onSubmit }) => {
   const [angle, setAngle] = useState('90');

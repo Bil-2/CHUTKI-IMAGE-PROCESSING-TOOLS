@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
+import FileUploadZone from '../shared/FileUploadZone';
 
 const RemoveBackgroundTool = () => {
   const navigate = useNavigate();
@@ -11,13 +12,15 @@ const RemoveBackgroundTool = () => {
   const [result, setResult] = useState(null);
   const [formData, setFormData] = useState({});
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileChange = (selectedFile) => {
     if (selectedFile) {
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
+    } else {
+      setFile(null);
+      setPreview(null);
     }
   };
 

@@ -84,8 +84,9 @@ export const AuthProvider = ({ children }) => {
         });
       } catch (error) {
         console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Don't remove token immediately, might be temporary parsing issue
+        // localStorage.removeItem('token');
+        // localStorage.removeItem('user');
       }
     }
 
@@ -282,13 +283,15 @@ export const AuthProvider = ({ children }) => {
         });
         return data.user;
       } else {
-        // Token might be invalid, logout
-        logout();
+        // Only logout if it's a 401 unauthorized error
+        if (response.status === 401) {
+          logout();
+        }
         return null;
       }
     } catch (error) {
       console.error('Get current user error:', error);
-      logout();
+      // Don't logout on network errors, only on auth errors
       return null;
     }
   };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
+import FileUploadZone from '../shared/FileUploadZone';
 
 const Compress20KBTool = () => {
   const navigate = useNavigate();

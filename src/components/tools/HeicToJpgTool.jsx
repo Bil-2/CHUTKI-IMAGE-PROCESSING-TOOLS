@@ -10,7 +10,12 @@ const HEICtoJPGTool = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [formData, setFormData] = useState({});
+  const [fileInfo, setFileInfo] = useState(null);
+  const [formData, setFormData] = useState({
+    quality: '90',
+    format: 'jpeg',
+    preserveMetadata: true
+  });
 
   const handleFileChange = (selectedFile) => {
     if (selectedFile) {
@@ -18,9 +23,19 @@ const HEICtoJPGTool = () => {
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
+      
+      // Get file info
+      const sizeInKB = (selectedFile.size / 1024).toFixed(2);
+      setFileInfo({
+        name: selectedFile.name,
+        size: sizeInKB,
+        type: selectedFile.type
+      });
     } else {
+      // File was removed
       setFile(null);
       setPreview(null);
+      setFileInfo(null);
     }
   };
 
@@ -36,7 +51,9 @@ const HEICtoJPGTool = () => {
     data.append('file', file);
     
     Object.keys(formData).forEach(key => {
-      if (formData[key]) data.append(key, formData[key]);
+      if (formData[key] !== null && formData[key] !== undefined) {
+        data.append(key, formData[key]);
+      }
     });
 
     try {
@@ -51,10 +68,10 @@ const HEICtoJPGTool = () => {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         setResult(url);
-        toast.success('Image processed successfully!');
+        toast.success('HEIC converted to JPG successfully!');
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Processing failed');
+        toast.error(error.message || 'Conversion failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -114,7 +131,50 @@ const HEICtoJPGTool = () => {
                 accept="image/*"
               />
 
-              
+              {/* File Info */}
+              {fileInfo && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">File Information</h3>
+                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p><span className="font-medium">Name:</span> {fileInfo.name}</p>
+                    <p><span className="font-medium">Size:</span> {fileInfo.size} KB</p>
+                    <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Quality */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Quality: {formData.quality}%
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={formData.quality}
+                  onChange={(e) => setFormData({...formData, quality: e.target.value})}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                  <span>Low Quality</span>
+                  <span>High Quality</span>
+                </div>
+              </div>
+
+              {/* Preserve Metadata */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="preserveMetadata"
+                  checked={formData.preserveMetadata}
+                  onChange={(e) => setFormData({...formData, preserveMetadata: e.target.checked})}
+                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="preserveMetadata" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                  Preserve metadata (EXIF, GPS, etc.)
+                </label>
+              </div>
 
               {/* Submit Button */}
               <button

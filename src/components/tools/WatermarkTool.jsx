@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
+import FileUploadZone from '../shared/FileUploadZone';
 
 const WatermarkTool = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const WatermarkTool = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [fileInfo, setFileInfo] = useState(null);
   const [formData, setFormData] = useState({
     text: '',
     position: 'bottom-right',
@@ -19,13 +21,25 @@ const WatermarkTool = () => {
     fontFamily: 'Arial'
   });
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileChange = (selectedFile) => {
     if (selectedFile) {
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
+      
+      // Get file info
+      const sizeInKB = (selectedFile.size / 1024).toFixed(2);
+      setFileInfo({
+        name: selectedFile.name,
+        size: sizeInKB,
+        type: selectedFile.type
+      });
+    } else {
+      // File was removed
+      setFile(null);
+      setPreview(null);
+      setFileInfo(null);
     }
   };
 
@@ -36,12 +50,19 @@ const WatermarkTool = () => {
       return;
     }
 
+    if (!formData.text.trim()) {
+      toast.error('Please enter watermark text');
+      return;
+    }
+
     setLoading(true);
     const data = new FormData();
     data.append('file', file);
     
     Object.keys(formData).forEach(key => {
-      if (formData[key]) data.append(key, formData[key]);
+      if (formData[key] !== null && formData[key] !== undefined) {
+        data.append(key, formData[key]);
+      }
     });
 
     try {
@@ -56,10 +77,10 @@ const WatermarkTool = () => {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         setResult(url);
-        toast.success('Image processed successfully!');
+        toast.success('Watermark added successfully!');
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Processing failed');
+        toast.error(error.message || 'Watermark failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -111,24 +132,23 @@ const WatermarkTool = () => {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
-                />
-              </div>
+              {/* File Upload Zone */}
+              <FileUploadZone
+                file={file}
+                onFileSelect={handleFileChange}
+                preview={preview}
+                accept="image/*"
+              />
 
-              {/* Preview */}
-              {preview && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
-                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+              {/* File Info */}
+              {fileInfo && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">File Information</h3>
+                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p><span className="font-medium">Name:</span> {fileInfo.name}</p>
+                    <p><span className="font-medium">Size:</span> {fileInfo.size} KB</p>
+                    <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
+                  </div>
                 </div>
               )}
 
