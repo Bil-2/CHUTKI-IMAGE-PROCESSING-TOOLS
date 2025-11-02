@@ -69,9 +69,18 @@ const Login = () => {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    // Redirect to Google OAuth
-    window.location.href = `${config.API_BASE_URL}/api/auth/google`;
+  const handleGoogleSignIn = async () => {
+    try {
+      // Check if Google OAuth is available
+      const response = await fetch(`${config.API_BASE_URL}/api/auth/google`);
+      if (response.ok) {
+        window.location.href = `${config.API_BASE_URL}/api/auth/google`;
+      } else {
+        setError('Google Sign-In is currently unavailable. Please use email/password login.');
+      }
+    } catch (error) {
+      setError('Google Sign-In is currently unavailable. Please use email/password login.');
+    }
   };
 
   return (
