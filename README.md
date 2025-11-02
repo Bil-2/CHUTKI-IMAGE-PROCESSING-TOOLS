@@ -8,6 +8,18 @@
 
 CHUTKI is a comprehensive, AI-powered image processing web application providing 100+ professional tools for image manipulation, conversion, and optimization.
 
+## 🌐 **LIVE APPLICATION**
+
+### 🚀 **Try it now:** [https://chutki-image-processing-tools.vercel.app](https://chutki-image-processing-tools.vercel.app)
+
+**Production Links:**
+
+- **Frontend:** https://chutki-image-processing-tools.vercel.app
+- **Backend API:** https://chutki-image-processing-tools.onrender.com
+- **Health Check:** https://chutki-image-processing-tools.onrender.com/api/health
+
+**Status:** ✅ LIVE & OPERATIONAL | **Tools:** 82 Working | **Auth:** Active
+
 ## ✨ Key Features
 
 ### 🛠️ 100+ Image Processing Tools

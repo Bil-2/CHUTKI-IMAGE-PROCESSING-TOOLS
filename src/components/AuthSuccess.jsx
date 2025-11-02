@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import config from '../config';
 
 const AuthSuccess = () => {
@@ -7,61 +8,76 @@ const AuthSuccess = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const handleAuthSuccess = async () => {
-      try {
-        // Get token from URL params
-        const urlParams = new URLSearchParams(location.search);
-        const token = urlParams.get('token');
+    const urlParams = new URLSearchParams(location.search);
+    const token = urlParams.get('token');
 
-        if (!token) {
-          navigate('/login?error=no_token');
-          return;
+    if (token) {
+      // Store the token
+      localStorage.setItem('token', token);
+      
+      // Verify the token and get user data
+      fetch(`${config.API_BASE_URL}/api/auth/verify-token`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-
-        // Verify token and get user data
-        const response = await fetch(`${config.API_BASE_URL}/api/auth/verify-token`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          // Store token and user data
-          localStorage.setItem('token', token);
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
-
-          // Trigger storage event to update AuthContext
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'token',
-            newValue: token,
-            storageArea: localStorage
-          }));
-
-          // Small delay to ensure context updates, then navigate
+          // Redirect to dashboard after successful authentication
           setTimeout(() => {
-            navigate('/', { replace: true });
-          }, 100);
+            window.location.href = '/';
+          }, 2000);
         } else {
-          navigate('/login?error=invalid_token');
+          console.error('Token verification failed:', data);
+          navigate('/login?error=auth_failed');
         }
-      } catch (error) {
-        console.error('Auth success error:', error);
+      })
+      .catch(error => {
+        console.error('Auth verification error:', error);
         navigate('/login?error=auth_error');
-      }
-    };
-
-    handleAuthSuccess();
+      });
+    } else {
+      // No token found, redirect to login
+      navigate('/login?error=no_token');
+    }
   }, [location, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Completing Sign In...</h2>
-        <p className="text-gray-600">Please wait while we redirect you.</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="text-center"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="mx-auto h-16 w-16 mb-6"
+        >
+          <svg className="w-full h-full text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-2xl font-bold text-gray-900 mb-2"
+        >
+          Authentication Successful!
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-gray-600"
+        >
+          Redirecting you to the dashboard...
+        </motion.p>
+      </motion.div>
     </div>
   );
 };
