@@ -32,7 +32,8 @@ import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.j
 
 // Import modular tools router
 import authRoutes from "./routes/auth.js";
-import modularToolsRoutes from "./api/modular-tools.js";
+import profileRoutes from "./routes/profile.js";
+import unifiedToolsRoutes from "./api/unified-tools.js";
 import chatgptRoutes from "./api/chatgpt.js";
 import aiChatRoutes from "./api/ai-chat.js";
 
@@ -74,7 +75,7 @@ app.use(compression());
 // Rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs
+  max: 10000, // limit each IP to 10000 requests per windowMs (increased for performance testing)
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: '15 minutes'
@@ -85,7 +86,7 @@ const generalLimiter = rateLimit({
 
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 uploads per windowMs
+  max: 5000, // limit each IP to 5000 uploads per windowMs (increased for performance testing)
   message: {
     error: 'Too many file uploads from this IP, please try again later.',
     retryAfter: '15 minutes'
@@ -223,6 +224,9 @@ app.get('/favicon.ico', (req, res) => {
 // Authentication routes
 app.use('/api/auth', authRoutes);
 
+// Profile routes
+app.use('/api/profile', profileRoutes);
+
 // ChatGPT API routes
 app.use('/api/chatgpt', chatgptRoutes);
 
@@ -230,7 +234,7 @@ app.use('/api/chatgpt', chatgptRoutes);
 app.use('/api/ai', aiChatRoutes);
 
 // Use modular tools router
-app.use('/api/tools', modularToolsRoutes);
+app.use('/api/tools', unifiedToolsRoutes);
 
 // Debug endpoint to verify routing
 app.get('/api/debug/routes', (req, res) => {

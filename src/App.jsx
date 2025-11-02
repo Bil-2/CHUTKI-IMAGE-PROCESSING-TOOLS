@@ -13,8 +13,6 @@ import ResetPassword from "./components/ResetPassword";
 import Home from "./components/Home";
 import Dashboard from "./components/Dashboard";
 import ImageTools from "./components/ImageTools";
-import ChutkiAssistant from "./components/ChutkiAssistant";
-import Footer from "./components/Footer";
 import GenericToolPage from "./components/GenericToolPage";
 import AuthSuccess from "./components/AuthSuccess";
 
@@ -25,6 +23,7 @@ import CompressImageTool from "./components/tools/CompressImageTool";
 import RotateImageTool from "./components/tools/RotateImageTool";
 import FlipImageTool from "./components/tools/FlipImageTool";
 import HeicToJpgTool from "./components/tools/HeicToJpgTool";
+import Profile from "./components/Profile";
 
 // Main App Content Component
 function AppContent() {
@@ -198,7 +197,7 @@ function AppContent() {
       />
 
       {/* ========= HEADER ========= */}
-      <header className="relative shadow-lg z-50 sticky top-0">
+      <header className="sticky top-0 z-50 relative shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
 
         <div className="relative max-w-7xl mx-auto flex justify-between items-center px-3 sm:px-4 lg:px-6 py-3 sm:py-3 lg:py-4">
@@ -315,6 +314,13 @@ function AppContent() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* Profile */}
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         } />
 
