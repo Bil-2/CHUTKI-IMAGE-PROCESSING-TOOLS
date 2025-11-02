@@ -189,23 +189,55 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
     }
   }, [chatState.messages.length, welcomeMessage]);
 
-  // Optimized drag and drop handlers with useCallback
+  // Enhanced drag and drop handlers with better error handling and compatibility
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Add visual feedback
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+    
     setUiState(prev => ({ ...prev, isDragOver: true }));
   }, []);
 
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
-    setUiState(prev => ({ ...prev, isDragOver: false }));
+    e.stopPropagation();
+    
+    // Only hide drag overlay when leaving the container, not child elements
+    if (e.target === e.currentTarget) {
+      setUiState(prev => ({ ...prev, isDragOver: false }));
+    }
   }, []);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     setUiState(prev => ({ ...prev, isDragOver: false }));
-    const files = e.dataTransfer.files;
+    
+    // Handle both files and items (for better compatibility)
+    let files = [];
+    
+    if (e.dataTransfer.items) {
+      // Use DataTransferItemList interface
+      for (let i = 0; i < e.dataTransfer.items.length; i++) {
+        if (e.dataTransfer.items[i].kind === 'file') {
+          const file = e.dataTransfer.items[i].getAsFile();
+          if (file && file.type.startsWith('image/')) {
+            files.push(file);
+          }
+        }
+      }
+    } else {
+      // Use DataTransfer interface
+      files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+    }
+    
     if (files.length > 0) {
-      const fileNames = Array.from(files).map(f => f.name).join(', ');
+      const fileNames = files.map(f => f.name).join(', ');
       const fileMessage = {
         id: Date.now(),
         role: 'assistant',
@@ -220,6 +252,18 @@ What processing would you like me to perform?`,
         ...prev,
         selectedFile: files,
         messages: [...prev.messages, fileMessage]
+      }));
+    } else {
+      // Show error message if no valid files were dropped
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '**No valid image files detected**\n\nPlease drop image files (JPEG, PNG, etc.) to process them.',
+        timestamp: new Date()
+      };
+      setChatState(prev => ({
+        ...prev,
+        messages: [...prev.messages, errorMessage]
       }));
     }
   }, []);
@@ -1354,13 +1398,21 @@ Just tell me your requirements!`,
             className={`bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-2xl rounded-3xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm ${uiState.isExpanded
               ? 'fixed inset-4 w-auto h-auto max-w-none max-h-none'
               : 'w-full max-w-[90vw] sm:w-80 sm:max-w-sm max-h-[70vh]'
-              } p-0 flex flex-col overflow-hidden`}
+              } p-0 flex flex-col overflow-hidden transition-all duration-200 ${uiState.isDragOver ? 'ring-4 ring-blue-400 ring-opacity-50 scale-[1.02]' : ''} relative`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Modern Header */}
-            <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-4 rounded-t-3xl">
+            {/* Modern Header with drag and drop indicator */}
+            <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-4 rounded-t-3xl relative">
+              {/* Drag and drop hint */}
+              <div className="absolute top-2 right-2 text-white/70 text-xs hidden sm:block">
+                <div className="flex items-center space-x-1">
+                  <FaUpload size={12} />
+                  <span>Drag & drop files</span>
+                </div>
+              </div>
+              
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
@@ -1494,13 +1546,18 @@ Just tell me your requirements!`,
               className="hidden"
             />
 
-            {/* Drag overlay */}
+            {/* Enhanced Drag overlay with better visual feedback */}
             {uiState.isDragOver && (
-              <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm border-2 border-dashed border-blue-400 rounded-3xl flex items-center justify-center z-50">
-                <div className="text-center text-blue-600 dark:text-blue-400">
-                  <FaUpload size={48} className="mx-auto mb-4 animate-bounce" />
-                  <p className="text-xl font-bold mb-2">Drop your images here!</p>
-                  <p className="text-sm opacity-80">Multiple files supported</p>
+              <div className="absolute inset-0 bg-blue-500/30 backdrop-blur-sm border-4 border-dashed border-blue-500 rounded-3xl flex items-center justify-center z-50 transition-all duration-200">
+                <div className="text-center text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-gray-800/80 p-8 rounded-2xl shadow-xl">
+                  <FaUpload size={64} className="mx-auto mb-4 text-blue-500 animate-bounce" />
+                  <p className="text-2xl font-bold mb-2">Drop your images here!</p>
+                  <p className="text-lg opacity-80 mb-4">Multiple files supported</p>
+                  <div className="flex items-center justify-center space-x-2 text-sm">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
                 </div>
               </div>
             )}

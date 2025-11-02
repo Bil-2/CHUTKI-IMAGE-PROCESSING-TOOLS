@@ -2,41 +2,22 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
-import FileUploadZone from '../shared/FileUploadZone';
 
-const CompressImageTool = () => {
+const ResizeUPSCTool = () => {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [fileInfo, setFileInfo] = useState(null);
-  const [formData, setFormData] = useState({
-    targetKB: '100',
-    quality: '80',
-    format: 'jpeg',
-    preserveMetadata: true
-  });
+  const [formData, setFormData] = useState({});
 
-  const handleFileChange = (selectedFile) => {
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
-      
-      // Get file info
-      const sizeInKB = (selectedFile.size / 1024).toFixed(2);
-      setFileInfo({
-        name: selectedFile.name,
-        size: sizeInKB,
-        type: selectedFile.type
-      });
-    } else {
-      // File was removed
-      setFile(null);
-      setPreview(null);
-      setFileInfo(null);
     }
   };
 
@@ -52,14 +33,12 @@ const CompressImageTool = () => {
     data.append('file', file);
     
     Object.keys(formData).forEach(key => {
-      if (formData[key] !== null && formData[key] !== undefined) {
-        data.append(key, formData[key]);
-      }
+      if (formData[key]) data.append(key, formData[key]);
     });
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_BASE_URL}/api/tools/image-compressor`, {
+      const response = await fetch(`${config.API_BASE_URL}/api/tools/resize-upsc`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: data
@@ -68,15 +47,11 @@ const CompressImageTool = () => {
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        setResult({
-          url,
-          size: (blob.size / 1024).toFixed(2),
-          originalSize: fileInfo?.size
-        });
-        toast.success('Image compressed successfully!');
+        setResult(url);
+        toast.success('Image processed successfully!');
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Compression failed');
+        toast.error(error.message || 'Processing failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -87,10 +62,10 @@ const CompressImageTool = () => {
   };
 
   const handleDownload = () => {
-    if (result?.url) {
+    if (result) {
       const a = document.createElement('a');
-      a.href = result.url;
-      a.download = 'compressed-' + Date.now() + '.' + formData.format;
+      a.href = result;
+      a.download = 'resize-upsc-' + Date.now() + '.jpg';
       a.click();
     }
   };
@@ -109,10 +84,10 @@ const CompressImageTool = () => {
             </svg>
             Back to Dashboard
           </button>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Advanced Image Compressor</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Compress images to exact file sizes with quality control</p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Resize UPSC</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Process your images with professional quality</p>
           <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
-            Compression
+            Image Editing
           </span>
         </div>
 
@@ -124,93 +99,32 @@ const CompressImageTool = () => {
               <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Upload Image & Settings
+              Upload Image
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Upload Zone */}
-              <FileUploadZone
-                file={file}
-                onFileSelect={handleFileChange}
-                preview={preview}
-                accept="image/*"
-              />
+              {/* File Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select Image
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
+                />
+              </div>
 
-              {/* File Info */}
-              {fileInfo && (
-                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
-                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">File Information</h3>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    <p><span className="font-medium">Name:</span> {fileInfo.name}</p>
-                    <p><span className="font-medium">Size:</span> {fileInfo.size} KB</p>
-                    <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
-                  </div>
+              {/* Preview */}
+              {preview && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
+                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
                 </div>
               )}
 
-              {/* Target Size */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Target Size (KB)
-                </label>
-                <input
-                  type="number"
-                  value={formData.targetKB}
-                  onChange={(e) => setFormData({...formData, targetKB: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter target size in KB"
-                  min="1"
-                />
-              </div>
-
-              {/* Quality */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Quality: {formData.quality}%
-                </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="100"
-                  value={formData.quality}
-                  onChange={(e) => setFormData({...formData, quality: e.target.value})}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <span>Low Quality</span>
-                  <span>High Quality</span>
-                </div>
-              </div>
-
-              {/* Format */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Output Format
-                </label>
-                <select
-                  value={formData.format}
-                  onChange={(e) => setFormData({...formData, format: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="jpeg">JPEG</option>
-                  <option value="png">PNG</option>
-                  <option value="webp">WebP</option>
-                </select>
-              </div>
-
-              {/* Preserve Metadata */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="preserveMetadata"
-                  checked={formData.preserveMetadata}
-                  onChange={(e) => setFormData({...formData, preserveMetadata: e.target.checked})}
-                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label htmlFor="preserveMetadata" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                  Preserve metadata (EXIF, GPS, etc.)
-                </label>
-              </div>
+              
 
               {/* Submit Button */}
               <button
@@ -224,9 +138,9 @@ const CompressImageTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Compressing...
+                    Processing...
                   </span>
-                ) : 'Compress Image'}
+                ) : 'Process Image'}
               </button>
             </form>
           </div>
@@ -242,15 +156,7 @@ const CompressImageTool = () => {
             
             {result ? (
               <div className="space-y-6">
-                <img src={result.url} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
-                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
-                  <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Compression Results</h3>
-                  <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
-                    <p><span className="font-medium">Original Size:</span> {result.originalSize} KB</p>
-                    <p><span className="font-medium">Compressed Size:</span> {result.size} KB</p>
-                    <p><span className="font-medium">Space Saved:</span> {(result.originalSize - result.size).toFixed(2)} KB ({((result.originalSize - result.size) / result.originalSize * 100).toFixed(1)}%)</p>
-                  </div>
-                </div>
+                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
                 <button
                   onClick={handleDownload}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
@@ -258,7 +164,7 @@ const CompressImageTool = () => {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Compressed Image
+                  Download Image
                 </button>
               </div>
             ) : (
@@ -269,7 +175,7 @@ const CompressImageTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">Compressing your image...</p>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing your image...</p>
                   </>
                 ) : (
                   <>
@@ -277,7 +183,7 @@ const CompressImageTool = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 text-center">
-                      Upload and compress an image to see results here
+                      Upload and process an image to see results here
                     </p>
                   </>
                 )}
@@ -290,4 +196,4 @@ const CompressImageTool = () => {
   );
 };
 
-export default CompressImageTool;
+export default ResizeUPSCTool;

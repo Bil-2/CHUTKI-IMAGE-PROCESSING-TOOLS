@@ -1,172 +1,189 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import ToolLayout from '../shared/ToolLayout';
-import ScrollEffect from '../shared/ScrollEffect';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import config from '../../config';
+import FileUploadZone from '../shared/FileUploadZone';
 
-const HeicToJpgSettings = ({ selectedFile, loading, onSubmit }) => {
-  const [quality, setQuality] = useState(90);
+const HEICtoJPGTool = () => {
+  const navigate = useNavigate();
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [formData, setFormData] = useState({});
 
-  const qualityPresets = [
-    { value: 95, label: 'Maximum Quality', description: 'Largest file size, best quality' },
-    { value: 90, label: 'High Quality', description: 'Recommended for photos' },
-    { value: 80, label: 'Good Quality', description: 'Balanced size and quality' },
-    { value: 70, label: 'Medium Quality', description: 'Smaller files, good for web' },
-    { value: 60, label: 'Lower Quality', description: 'Smallest files, basic quality' }
-  ];
+  const handleFileChange = (selectedFile) => {
+    if (selectedFile) {
+      setFile(selectedFile);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result);
+      reader.readAsDataURL(selectedFile);
+    } else {
+      setFile(null);
+      setPreview(null);
+    }
+  };
 
-  const handleSubmit = () => {
-    const formData = { quality };
-    onSubmit(formData);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      toast.error('Please select an image');
+      return;
+    }
+
+    setLoading(true);
+    const data = new FormData();
+    data.append('file', file);
+    
+    Object.keys(formData).forEach(key => {
+      if (formData[key]) data.append(key, formData[key]);
+    });
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_BASE_URL}/api/tools/heic-to-jpg`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: data
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        setResult(url);
+        toast.success('Image processed successfully!');
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Processing failed');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = () => {
+    if (result) {
+      const a = document.createElement('a');
+      a.href = result;
+      a.download = 'heic-to-jpg-' + Date.now() + '.jpg';
+      a.click();
+    }
   };
 
   return (
-    <>
-      {/* Format Info */}
-      <ScrollEffect animation="fade-up" duration={600} delay={0}>
-        <div className="bg-white rounded-lg p-6 shadow-lg">
-        <h3 className="text-lg font-semibold mb-4">HEIC to JPG Conversion</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl mb-2">📱</div>
-            <div className="font-medium">HEIC Format</div>
-            <div className="text-sm text-gray-600">Apple's high-efficiency format</div>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl mb-2">🖼️</div>
-            <div className="font-medium">JPG Format</div>
-            <div className="text-sm text-gray-600">Universal compatibility</div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 mb-4 flex items-center group"
+          >
+            <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </button>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">HEIC to JPG</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Process your images with professional quality</p>
+          <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
+            Format Conversion
+          </span>
         </div>
-      </div>
-      </ScrollEffect>
 
-      {/* Quality Settings */}
-      <ScrollEffect animation="fade-up" duration={600} delay={100}>
-        <div className="bg-white rounded-lg p-6 shadow-lg">
-        <h3 className="text-lg font-semibold mb-4">Output Quality</h3>
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Upload Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload Image
+            </h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* File Upload Zone */}
+              <FileUploadZone
+                file={file}
+                onFileSelect={handleFileChange}
+                preview={preview}
+                accept="image/*"
+              />
 
-        {/* Quality Presets */}
-        <div className="space-y-2 mb-4">
-          {qualityPresets.map((preset) => (
-            <button
-              key={preset.value}
-              onClick={() => setQuality(preset.value)}
-              className={`w-full text-left p-3 border rounded-lg transition-colors ${quality === preset.value
-                  ? 'bg-blue-50 border-blue-300'
-                  : 'hover:bg-gray-50 hover:border-gray-300'
-                }`}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">{preset.label}</div>
-                  <div className="text-sm text-gray-500">{preset.description}</div>
-                </div>
-                <div className="text-sm font-medium">{preset.value}%</div>
+              
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || !file}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : 'Process Image'}
+              </button>
+            </form>
+          </div>
+
+          {/* Result Section */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Result
+            </h2>
+            
+            {result ? (
+              <div className="space-y-6">
+                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                <button
+                  onClick={handleDownload}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Image
+                </button>
               </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Custom Quality Slider */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Custom Quality: {quality}%
-          </label>
-          <input
-            type="range"
-            min="10"
-            max="100"
-            value={quality}
-            onChange={(e) => setQuality(parseInt(e.target.value))}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>Smaller file</span>
-            <span>Better quality</span>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-80 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-500">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing your image...</p>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-gray-500 dark:text-gray-400 text-center">
+                      Upload and process an image to see results here
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
-      </ScrollEffect>
-
-      {/* Conversion Preview */}
-      {selectedFile && (
-        <ScrollEffect animation="fade-up" duration={600} delay={200}>
-        <div className="bg-white rounded-lg p-6 shadow-lg">
-          <h3 className="text-lg font-semibold mb-4">Conversion Preview</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Input Format:</span>
-              <span className="font-medium">HEIC</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Output Format:</span>
-              <span className="font-medium">JPG</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Quality Setting:</span>
-              <span className="font-medium">{quality}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Compatibility:</span>
-              <span className="font-medium text-green-600">Universal</span>
-            </div>
-          </div>
-        </div>
-        </ScrollEffect>
-      )}
-
-      {/* Process Button */}
-      <ScrollEffect animation="scale-up" duration={500} delay={250}>
-      <motion.button
-        onClick={handleSubmit}
-        disabled={!selectedFile || loading}
-        className={`w-full py-4 rounded-lg font-semibold text-lg transition-all ${!selectedFile || loading
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
-          }`}
-        whileHover={!loading && selectedFile ? { scale: 1.02 } : {}}
-        whileTap={!loading && selectedFile ? { scale: 0.98 } : {}}
-      >
-        {loading ? (
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
-            Converting...
-          </div>
-        ) : (
-          'Convert HEIC to JPG'
-        )}
-      </motion.button>
-      </ScrollEffect>
-
-      {/* Benefits */}
-      <ScrollEffect animation="fade-up" duration={600} delay={300}>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-semibold text-green-800 mb-2">Why Convert HEIC to JPG?</h4>
-        <ul className="text-sm text-green-700 space-y-1">
-          <li>• <strong>Universal Compatibility:</strong> Works on all devices and platforms</li>
-          <li>• <strong>Easy Sharing:</strong> Share on social media and messaging apps</li>
-          <li>• <strong>Web Compatible:</strong> Display on websites and online galleries</li>
-          <li>• <strong>Editing Support:</strong> Open in any photo editing software</li>
-        </ul>
-      </div>
-      </ScrollEffect>
-    </>
+    </div>
   );
 };
 
-const HeicToJpgTool = () => {
-  return (
-    <ToolLayout
-      title="HEIC to JPG Converter"
-      description="Convert Apple HEIC photos to universal JPG format with quality control"
-      endpoint={`${config.API_BASE_URL}/api/tools/heic-to-jpg`}
-      acceptedFormats=".heic,.heif,image/heic,image/heif"
-      maxFileSize={20}
-    >
-      <HeicToJpgSettings />
-    </ToolLayout>
-  );
-};
-
-export default HeicToJpgTool;
+export default HEICtoJPGTool;

@@ -1,29 +1,25 @@
 import React, { useState } from 'react';
-import { useNavigate, useNavigationType } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
-import FileUploadZone from '../shared/FileUploadZone';
 
-const ResizePixelTool = () => {
+const IncreaseSizeKBTool = () => {
   const navigate = useNavigate();
-  const navigationType = useNavigationType();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [fileInfo, setFileInfo] = useState(null);
   const [formData, setFormData] = useState({
-    width: '',
-    height: '',
-    maintainAspectRatio: true,
-    quality: '90',
+    targetKB: '',
+    quality: 95,
     format: 'jpeg',
-    resizeMethod: 'lanczos3',
-    upscaling: false,
-    smartCrop: false
+    preserveMetadata: true,
+    upscaleMethod: 'standard'
   });
 
-  const handleFileChange = (selectedFile) => {
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
       const reader = new FileReader();
@@ -37,11 +33,6 @@ const ResizePixelTool = () => {
         size: sizeInKB,
         type: selectedFile.type
       });
-    } else {
-      // File was removed
-      setFile(null);
-      setPreview(null);
-      setFileInfo(null);
     }
   };
 
@@ -52,28 +43,19 @@ const ResizePixelTool = () => {
       return;
     }
 
-    if (!formData.width || !formData.height) {
-      toast.error('Please enter both width and height');
-      return;
-    }
-
     setLoading(true);
     const data = new FormData();
     data.append('file', file);
     
-    // Map frontend formData to backend parameters
-    data.append('width', formData.width);
-    data.append('height', formData.height);
-    data.append('maintain', formData.maintainAspectRatio ? 'true' : 'false');
-    data.append('quality', formData.quality);
-    data.append('format', formData.format);
-    data.append('resizeMethod', formData.resizeMethod);
-    data.append('upscaling', formData.upscaling ? 'true' : 'false');
-    data.append('smartCrop', formData.smartCrop ? 'true' : 'false');
+    Object.keys(formData).forEach(key => {
+      if (formData[key] !== null && formData[key] !== undefined) {
+        data.append(key, formData[key]);
+      }
+    });
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_BASE_URL}/api/tools/resize-pixel`, {
+      const response = await fetch(`${config.API_BASE_URL}/api/tools/increase-size-kb`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: data
@@ -83,31 +65,31 @@ const ResizePixelTool = () => {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         
-        // Get resize info from response headers
-        let resizeInfo = null;
+        // Get size increase info from response headers
+        let sizeIncreaseInfo = null;
         try {
-          const resizeHeader = response.headers.get('X-Resize-Info');
-          if (resizeHeader) {
-            resizeInfo = JSON.parse(resizeHeader);
+          const sizeIncreaseHeader = response.headers.get('X-Size-Increase-Info');
+          if (sizeIncreaseHeader) {
+            sizeIncreaseInfo = JSON.parse(sizeIncreaseHeader);
           }
         } catch (parseError) {
-          console.log('Failed to parse resize info');
+          console.log('Failed to parse size increase info');
         }
         
         setResult({
           url,
-          resizeInfo
+          sizeIncreaseInfo
         });
         
-        // Show resize results toast
-        if (resizeInfo) {
-          toast.success(`Image resized from ${resizeInfo.originalWidth}x${resizeInfo.originalHeight} to ${resizeInfo.targetWidth}x${resizeInfo.targetHeight}`);
+        // Show size increase results toast
+        if (sizeIncreaseInfo) {
+          toast.success(`Image size increased by ${sizeIncreaseInfo.increasePercentage}% (${(sizeIncreaseInfo.increase / 1024).toFixed(2)} KB)`);
         } else {
-          toast.success('Image resized successfully!');
+          toast.success('Image processed successfully!');
         }
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Resizing failed');
+        toast.error(error.message || 'Processing failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -122,12 +104,10 @@ const ResizePixelTool = () => {
       const a = document.createElement('a');
       a.href = result.url;
       const extension = formData.format === 'png' ? '.png' : formData.format === 'webp' ? '.webp' : '.jpg';
-      a.download = 'resized-' + Date.now() + extension;
+      a.download = 'increased-' + Date.now() + extension;
       a.click();
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8">
@@ -135,16 +115,16 @@ const ResizePixelTool = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/dashboard')}
             className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 mb-4 flex items-center group"
           >
             <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back
+            Back to Dashboard
           </button>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Advanced Pixel Resize</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Resize images with professional quality and advanced options</p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Increase Image Size in KB</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Increase your image file size with quality controls and format options</p>
           <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
             Image Editing
           </span>
@@ -158,17 +138,22 @@ const ResizePixelTool = () => {
               <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Upload Image & Resize Settings
+              Upload Image
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Upload Zone */}
-              <FileUploadZone
-                file={file}
-                onFileSelect={handleFileChange}
-                preview={preview}
-                accept="image/*"
-              />
+              {/* File Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Select Image
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
+                />
+              </div>
 
               {/* File Info */}
               {fileInfo && (
@@ -182,62 +167,27 @@ const ResizePixelTool = () => {
                 </div>
               )}
 
-              {/* Width and Height */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Width (px)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.width}
-                    onChange={(e) => setFormData({...formData, width: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Enter width"
-                    min="1"
-                  />
+              {/* Preview */}
+              {preview && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
+                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Height (px)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.height}
-                    onChange={(e) => setFormData({...formData, height: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Enter height"
-                    min="1"
-                  />
-                </div>
-              </div>
+              )}
 
-              {/* Maintain Aspect Ratio */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="maintainAspectRatio"
-                  checked={formData.maintainAspectRatio}
-                  onChange={(e) => setFormData({...formData, maintainAspectRatio: e.target.checked})}
-                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label htmlFor="maintainAspectRatio" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                  Maintain aspect ratio
+              {/* Target Size */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Target Size (KB)
                 </label>
-              </div>
-
-              {/* Smart Crop */}
-              <div className="flex items-center">
                 <input
-                  type="checkbox"
-                  id="smartCrop"
-                  checked={formData.smartCrop}
-                  onChange={(e) => setFormData({...formData, smartCrop: e.target.checked})}
-                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                  type="number"
+                  value={formData.targetKB}
+                  onChange={(e) => setFormData({...formData, targetKB: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Enter target size in KB"
+                  min="1"
                 />
-                <label htmlFor="smartCrop" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                  Smart crop (maintain exact dimensions)
-                </label>
               </div>
 
               {/* Quality */}
@@ -259,23 +209,6 @@ const ResizePixelTool = () => {
                 </div>
               </div>
 
-              {/* Resize Method */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Resize Method
-                </label>
-                <select
-                  value={formData.resizeMethod}
-                  onChange={(e) => setFormData({...formData, resizeMethod: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="lanczos3">Lanczos3 (Best Quality)</option>
-                  <option value="nearest">Nearest (Pixel Art)</option>
-                  <option value="cubic">Cubic (Good Balance)</option>
-                  <option value="mitchell">Mitchell (Sharp)</option>
-                </select>
-              </div>
-
               {/* Format */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -292,6 +225,35 @@ const ResizePixelTool = () => {
                 </select>
               </div>
 
+              {/* Upscale Method */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Upscale Method
+                </label>
+                <select
+                  value={formData.upscaleMethod}
+                  onChange={(e) => setFormData({...formData, upscaleMethod: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="standard">Standard</option>
+                  <option value="ai">AI Upscaling (for small files)</option>
+                </select>
+              </div>
+
+              {/* Preserve Metadata */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="preserveMetadata"
+                  checked={formData.preserveMetadata}
+                  onChange={(e) => setFormData({...formData, preserveMetadata: e.target.checked})}
+                  className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <label htmlFor="preserveMetadata" className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                  Preserve metadata (EXIF, GPS, etc.)
+                </label>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -304,9 +266,9 @@ const ResizePixelTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Resizing...
+                    Processing...
                   </span>
-                ) : 'Resize Image'}
+                ) : 'Process Image'}
               </button>
             </form>
           </div>
@@ -324,25 +286,18 @@ const ResizePixelTool = () => {
               <div className="space-y-6">
                 <img src={result.url} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
                 
-                {/* Resize Info */}
-                {result.resizeInfo && (
+                {/* Size Increase Results */}
+                {result.sizeIncreaseInfo && (
                   <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
-                    <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Resize Information</h3>
+                    <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Size Increase Results</h3>
                     <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
-                      <p><span className="font-medium">Original Size:</span> {result.resizeInfo.originalWidth} x {result.resizeInfo.originalHeight} pixels</p>
-                      <p><span className="font-medium">Resized To:</span> {result.resizeInfo.targetWidth} x {result.resizeInfo.targetHeight} pixels</p>
-                      <p><span className="font-medium">Quality:</span> {result.resizeInfo.quality}%</p>
-                      <p><span className="font-medium">Format:</span> {result.resizeInfo.format.toUpperCase()}</p>
-                      <p><span className="font-medium">Resize Method:</span> {formData.resizeMethod}</p>
-                      <p><span className="font-medium">Aspect Ratio:</span> {formData.maintainAspectRatio ? 'Maintained' : 'Not Maintained'}</p>
-                      <p><span className="font-medium">Smart Crop:</span> {formData.smartCrop ? 'Enabled' : 'Disabled'}</p>
-                      <p><span className="font-medium">Upscaling:</span> {formData.upscaling ? 'Allowed' : 'Prevented'}</p>
-                      {result.resizeInfo.upscaled && (
-                        <p className="text-yellow-600 dark:text-yellow-400 font-medium">⚠️ Image was upscaled (may affect quality)</p>
-                      )}
-                      {result.resizeInfo.aspectRatioChanged && (
-                        <p className="text-yellow-600 dark:text-yellow-400 font-medium">⚠️ Aspect ratio was changed</p>
-                      )}
+                      <p><span className="font-medium">Original Size:</span> {(result.sizeIncreaseInfo.originalSize / 1024).toFixed(2)} KB</p>
+                      <p><span className="font-medium">Increased Size:</span> {(result.sizeIncreaseInfo.increasedSize / 1024).toFixed(2)} KB</p>
+                      <p><span className="font-medium">Size Increase:</span> {(result.sizeIncreaseInfo.increase / 1024).toFixed(2)} KB ({result.sizeIncreaseInfo.increasePercentage}%)</p>
+                      <p><span className="font-medium">Target:</span> {result.sizeIncreaseInfo.targetKB} KB</p>
+                      <p><span className="font-medium">Quality:</span> {result.sizeIncreaseInfo.quality}%</p>
+                      <p><span className="font-medium">Format:</span> {result.sizeIncreaseInfo.format.toUpperCase()}</p>
+                      <p><span className="font-medium">Upscale Method:</span> {result.sizeIncreaseInfo.upscaleMethod}</p>
                     </div>
                   </div>
                 )}
@@ -354,7 +309,7 @@ const ResizePixelTool = () => {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Resized Image
+                  Download Increased Image
                 </button>
               </div>
             ) : (
@@ -365,7 +320,7 @@ const ResizePixelTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">Resizing your image...</p>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing your image...</p>
                   </>
                 ) : (
                   <>
@@ -386,4 +341,4 @@ const ResizePixelTool = () => {
   );
 };
 
-export default ResizePixelTool;
+export default IncreaseSizeKBTool;

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toolsConfig } from "../toolsConfig";
 import ScrollEffect from "./shared/ScrollEffect";
+import FileUploadZone from "./shared/FileUploadZone";
 
 const GenericToolPage = () => {
   const navigate = useNavigate();
@@ -44,8 +45,7 @@ const GenericToolPage = () => {
     );
   }
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
+  const handleFileSelect = (file) => {
     if (file) {
       setSelectedFile(file);
       setError(null);
@@ -53,24 +53,12 @@ const GenericToolPage = () => {
       const reader = new FileReader();
       reader.onload = (e) => setPreview(e.target.result);
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleDrop = (event) => {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      setSelectedFile(file);
-      setError(null);
+    } else {
+      // File was removed
+      setSelectedFile(null);
+      setPreview(null);
       setResult(null);
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target.result);
-      reader.readAsDataURL(file);
     }
-  };
-
-  const handleDragOver = (event) => {
-    event.preventDefault();
   };
 
   const handleInputChange = (field, value) => {
@@ -301,54 +289,12 @@ const GenericToolPage = () => {
           {/* Left Column - Image Upload and Preview */}
           <div className="space-y-4 sm:space-y-6">
             {/* File Upload Area */}
-            <div
-              className="border-2 border-dashed border-purple-300 dark:border-purple-600 rounded-lg p-4 sm:p-6 lg:p-8 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors cursor-pointer bg-white dark:bg-gray-800 min-h-[200px] sm:min-h-[250px] flex flex-col justify-center"
-              onClick={() => fileInputRef.current?.click()}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              {!preview ? (
-                <div>
-                  <div className="text-4xl sm:text-5xl lg:text-6xl mb-2 sm:mb-4">📷</div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                    Select Or Drag & Drop Image Here
-                  </h3>
-                  <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
-                    Supports JPG, PNG, WEBP, HEIC formats
-                  </p>
-                  <button className="bg-purple-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base font-medium">
-                    Select Image
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    className="max-w-full h-32 sm:h-48 lg:h-64 object-contain mx-auto rounded-lg shadow-lg"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                      setPreview(null);
-                      setResult(null);
-                    }}
-                    className="mt-3 sm:mt-4 bg-red-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-red-600 transition-colors text-sm sm:text-base"
-                  >
-                    Remove File
-                  </button>
-                </div>
-              )}
-            </div>
+            <FileUploadZone
+              file={selectedFile}
+              onFileSelect={handleFileSelect}
+              preview={preview}
+              accept="image/*"
+            />
 
             {/* File Info */}
             {selectedFile && (

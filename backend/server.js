@@ -37,6 +37,10 @@ import unifiedToolsRoutes from "./api/unified-tools.js";
 import chatgptRoutes from "./api/chatgpt.js";
 import aiChatRoutes from "./api/ai-chat.js";
 
+// Import separate tool routers
+import resizePixelRoutes from "./api/tools/resize-pixel.js";
+import passportPhotoAdvancedRoutes from "./api/tools/passport-photo-advanced.js";
+
 // Validate environment configuration
 const { errors, warnings } = validateEnvironment();
 
@@ -236,6 +240,10 @@ app.use('/api/ai', aiChatRoutes);
 // Use modular tools router
 app.use('/api/tools', unifiedToolsRoutes);
 
+// Use separate tool routers
+app.use('/api/tools/resize-pixel', resizePixelRoutes);
+app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
+
 // Debug endpoint to verify routing
 app.get('/api/debug/routes', (req, res) => {
   res.json({
@@ -244,6 +252,8 @@ app.get('/api/debug/routes', (req, res) => {
     routes: {
       '/api/tools/test': 'GET - Test endpoint',
       '/api/tools/passport-photo': 'POST - Passport photo tool',
+      '/api/tools/passport-photo-advanced': 'POST - Advanced passport photo tool',
+      '/api/tools/resize-pixel': 'POST - Resize image pixel tool',
       '/api/tools/:tool': 'POST - Any tool via modular router'
     }
   });

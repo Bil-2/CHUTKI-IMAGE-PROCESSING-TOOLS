@@ -6,25 +6,97 @@ export const resizeTools = {
     try {
       if (!validateFile(req, res, 'resize-pixel')) return;
 
-      const { width, height, maintain = 'true' } = req.body;
+      const { width, height, maintain = 'true', quality = '90', format = 'jpeg', resizeMethod = 'lanczos3', upscaling = 'false', smartCrop = 'false' } = req.body;
       const targetWidth = parseInt(width);
       const targetHeight = parseInt(height);
+      const targetQuality = parseInt(quality);
 
+      // Advanced resize options
       let resizeOptions = { fit: 'fill' };
+      
+      // Maintain aspect ratio
       if (maintain === 'true') {
         resizeOptions.fit = 'inside';
         resizeOptions.withoutEnlargement = false;
       }
-
-      const processedBuffer = await sharp(req.files[0].buffer)
-        .resize(targetWidth, targetHeight, resizeOptions)
-        .jpeg({ quality: 90 })
-        .toBuffer();
-
-      const filename = `resized_${targetWidth}x${targetHeight}_${Date.now()}.jpg`;
+      
+      // Smart cropping
+      if (smartCrop === 'true') {
+        resizeOptions.fit = 'cover';
+        resizeOptions.position = 'attention'; // Focus on important areas
+      }
+      
+      // Resize method
+      switch (resizeMethod) {
+        case 'nearest':
+          resizeOptions.kernel = sharp.kernel.nearest;
+          break;
+        case 'cubic':
+          resizeOptions.kernel = sharp.kernel.cubic;
+          break;
+        case 'mitchell':
+          resizeOptions.kernel = sharp.kernel.mitchell;
+          break;
+        case 'lanczos2':
+          resizeOptions.kernel = sharp.kernel.lanczos2;
+          break;
+        case 'lanczos3':
+        default:
+          resizeOptions.kernel = sharp.kernel.lanczos3;
+          break;
+      }
+      
+      // Handle upscaling
+      if (upscaling === 'false') {
+        resizeOptions.withoutEnlargement = true;
+      }
+      
+      // Get original metadata
+      const metadata = await sharp(req.files[0].buffer).metadata();
+      
+      // Process image
+      let processor = sharp(req.files[0].buffer);
+      
+      // Apply advanced resize
+      processor = processor.resize(targetWidth, targetHeight, resizeOptions);
+      
+      // Format-specific processing
+      let extension = '.jpg';
+      switch (format) {
+        case 'png':
+          processor = processor.png({ quality: targetQuality });
+          extension = '.png';
+          break;
+        case 'webp':
+          processor = processor.webp({ quality: targetQuality });
+          extension = '.webp';
+          break;
+        case 'jpeg':
+        default:
+          processor = processor.jpeg({ quality: targetQuality, mozjpeg: true });
+          extension = '.jpg';
+          break;
+      }
+      
+      const processedBuffer = await processor.toBuffer();
+      
+      // Add resize info to response header
+      const resizeInfo = {
+        originalWidth: metadata.width,
+        originalHeight: metadata.height,
+        targetWidth: targetWidth,
+        targetHeight: targetHeight,
+        aspectRatioChanged: maintain === 'true' && (metadata.width / metadata.height) !== (targetWidth / targetHeight),
+        upscaled: targetWidth > metadata.width || targetHeight > metadata.height,
+        format: format,
+        quality: targetQuality
+      };
+      
+      const filename = `resized_${targetWidth}x${targetHeight}_${Date.now()}${extension}`;
       res.set({
-        'Content-Type': 'image/jpeg',
-        'Content-Disposition': `attachment; filename="${filename}"`
+        'Content-Type': format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'X-Resize-Info': JSON.stringify(resizeInfo)
       });
       res.send(processedBuffer);
     } catch (error) {

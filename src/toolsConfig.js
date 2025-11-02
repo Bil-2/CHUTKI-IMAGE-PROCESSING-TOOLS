@@ -7,7 +7,7 @@ export const toolsConfig = {
       name: "Passport Photo Maker",
       route: "/tools/passport-photo",
       description: "Generate professional passport photos with custom sizes",
-      endpoint: `${config.API_BASE_URL}/api/tools/passport-photo`,
+      endpoint: `${config.API_BASE_URL}/api/tools/passport-photo-advanced`,
       method: "POST",
       fields: ["file", "size", "dpi", "background", "format", "quantity"]
     },
@@ -25,7 +25,7 @@ export const toolsConfig = {
       description: "Resize image by pixel dimensions",
       endpoint: `${config.API_BASE_URL}/api/tools/resize-pixel`,
       method: "POST",
-      fields: ["file", "width", "height", "maintain"]
+      fields: ["file", "width", "height", "maintainAspectRatio", "quality", "format", "resizeMethod", "upscaling", "smartCrop"]
     },
     {
       name: "Generate Signature",

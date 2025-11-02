@@ -370,13 +370,6 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        {/* Dynamic route for all tools - this will catch any /tools/* path */}
-        <Route path="/tools/*" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
-
         {/* Image Tools */}
         <Route path="/image-tools" element={
           <ProtectedRoute>
@@ -384,7 +377,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        {/* Fallback for any other tool routes */}
+        {/* Dynamic route for all tools - this will catch any /tools/* path */}
         <Route path="/tools/:toolName" element={
           <ProtectedRoute>
             <GenericToolPage />
