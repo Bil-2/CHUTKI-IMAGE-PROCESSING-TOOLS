@@ -83,4 +83,4 @@ const warmUpServer = async () => {
 // Run the warm-up
 warmUpServer().catch(console.error);
 
-module.exports = { warmUpServer };
+export { warmUpServer };
