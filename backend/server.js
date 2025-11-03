@@ -28,6 +28,22 @@ import "./config/passport.js";
 import passport from "passport";
 import { validateFile } from "./utils/validation.js";
 import { successResponse, errorResponse } from "./utils/response.js";
+
+// Keep-alive mechanism to prevent cold starts
+const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || `https://chutki-image-processing-tools.onrender.com`;
+
+const keepAlive = () => {
+  if (process.env.NODE_ENV === 'production') {
+    setInterval(async () => {
+      try {
+        const response = await fetch(`${KEEP_ALIVE_URL}/api/health`);
+        console.log(`[KEEP-ALIVE] Ping successful: ${response.status}`);
+      } catch (error) {
+        console.log(`[KEEP-ALIVE] Ping failed: ${error.message}`);
+      }
+    }, 14 * 60 * 1000); // Ping every 14 minutes
+  }
+};
 import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.js";
 
 // Import modular tools router
@@ -371,6 +387,10 @@ const startServer = async () => {
       console.log(`[BACKEND] Backend URL: http://localhost:${PORT}`);
       console.log(`[HEALTH] Health check: http://localhost:${PORT}/api/health`);
       console.log(`[PRIVACY] Privacy Notice: Images are automatically deleted after 30 minutes`);
+      
+      // Start keep-alive mechanism
+      keepAlive();
+      console.log(`[KEEP-ALIVE] Keep-alive mechanism started`);
     });
 
     // Graceful shutdown handlers

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import config from '../config';
-import logoSvg from '../assets/logo.svg';
+import Logo from './Logo';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -110,11 +110,7 @@ const Register = () => {
             whileHover={{ scale: 1.1, rotate: 5 }}
             className="mx-auto h-24 w-24 mb-6 flex items-center justify-center"
           >
-            <img 
-              src={logoSvg} 
-              alt="CHUTKI Logo" 
-              className="w-full h-full drop-shadow-2xl"
-            />
+            <Logo className="w-full h-full drop-shadow-2xl" />
           </motion.div>
           <motion.h2 
             className="text-3xl font-bold text-gray-900 mb-2"

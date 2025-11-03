@@ -15,7 +15,8 @@ import Dashboard from "./components/Dashboard";
 import ImageTools from "./components/ImageTools";
 import GenericToolPage from "./components/GenericToolPage";
 import AuthSuccess from "./components/AuthSuccess";
-import logoSvg from "./assets/logo.svg";
+import Logo from "./components/Logo";
+import LoadingSpinner from "./components/LoadingSpinner";
 
 // Import individual tool components
 import PassportPhotoTool from "./components/tools/PassportPhotoTool";
@@ -79,11 +80,7 @@ function AppContent() {
 
   // Show loading spinner while checking authentication
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
+    return <LoadingSpinner message="Initializing CHUTKI..." />;
   }
 
   // Check localStorage as backup before redirecting
@@ -210,11 +207,7 @@ function AppContent() {
         <div className="relative max-w-7xl mx-auto flex justify-between items-center px-3 sm:px-4 lg:px-6 py-3 sm:py-3 lg:py-4">
           {/* Logo + Name */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <img 
-              src={logoSvg} 
-              alt="CHUTKI Logo" 
-              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 drop-shadow-lg hover:scale-110 transition-transform duration-300"
-            />
+            <Logo className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 drop-shadow-lg hover:scale-110 transition-transform duration-300" />
             <h1 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
               Chutki Image Tools
             </h1>
