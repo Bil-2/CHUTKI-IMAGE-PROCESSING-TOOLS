@@ -7,7 +7,9 @@ const Logo = ({ className = "w-full h-full", alt = "CHUTKI Logo" }) => {
       viewBox="0 0 200 200" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
-      alt={alt}
+      role="img"
+      aria-label={alt}
+      style={{ display: 'block' }}
     >
       {/* Gradient Definitions */}
       <defs>

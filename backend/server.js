@@ -29,19 +29,41 @@ import passport from "passport";
 import { validateFile } from "./utils/validation.js";
 import { successResponse, errorResponse } from "./utils/response.js";
 
-// Keep-alive mechanism to prevent cold starts
+// Advanced keep-alive mechanism to prevent cold starts
 const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || `https://chutki-image-processing-tools.onrender.com`;
 
 const keepAlive = () => {
   if (process.env.NODE_ENV === 'production') {
-    setInterval(async () => {
+    // Multiple ping intervals for better reliability
+    const intervals = [
+      13 * 60 * 1000,  // 13 minutes
+      14 * 60 * 1000,  // 14 minutes  
+      15 * 60 * 1000   // 15 minutes
+    ];
+    
+    intervals.forEach((interval, index) => {
+      setInterval(async () => {
+        try {
+          const response = await fetch(`${KEEP_ALIVE_URL}/api/health`, {
+            method: 'GET',
+            headers: { 'User-Agent': `CHUTKI-KeepAlive-${index}` }
+          });
+          console.log(`[KEEP-ALIVE-${index}] Ping successful: ${response.status}`);
+        } catch (error) {
+          console.log(`[KEEP-ALIVE-${index}] Ping failed: ${error.message}`);
+        }
+      }, interval);
+    });
+    
+    // Immediate ping on startup
+    setTimeout(async () => {
       try {
-        const response = await fetch(`${KEEP_ALIVE_URL}/api/health`);
-        console.log(`[KEEP-ALIVE] Ping successful: ${response.status}`);
+        await fetch(`${KEEP_ALIVE_URL}/api/health`);
+        console.log(`[KEEP-ALIVE] Initial ping completed`);
       } catch (error) {
-        console.log(`[KEEP-ALIVE] Ping failed: ${error.message}`);
+        console.log(`[KEEP-ALIVE] Initial ping failed: ${error.message}`);
       }
-    }, 14 * 60 * 1000); // Ping every 14 minutes
+    }, 30000); // 30 seconds after startup
   }
 };
 import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.js";
@@ -89,8 +111,31 @@ app.use(helmet({
   },
 }));
 
-// Compression middleware
-app.use(compression());
+// Compression middleware with optimization
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
+
+// Performance optimization headers
+app.use((req, res, next) => {
+  // Cache static assets
+  if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+  
+  // Optimize response headers
+  res.setHeader('X-Powered-By', 'CHUTKI');
+  res.setHeader('Server', 'CHUTKI-Server');
+  
+  next();
+});
 
 // Rate limiting
 const generalLimiter = rateLimit({
@@ -275,8 +320,24 @@ app.get('/api/debug/routes', (req, res) => {
   });
 });
 
-// Enhanced health check endpoint
+// Optimized health check endpoint with caching
+let healthCache = null;
+let healthCacheTime = 0;
+const HEALTH_CACHE_TTL = 30000; // 30 seconds
+
 app.get("/api/health", (req, res) => {
+  // Set performance headers
+  res.setHeader('Cache-Control', 'public, max-age=30');
+  res.setHeader('X-Response-Time', Date.now());
+  
+  const now = Date.now();
+  
+  // Return cached response if still valid
+  if (healthCache && (now - healthCacheTime) < HEALTH_CACHE_TTL) {
+    return res.status(200).json(healthCache);
+  }
+  
+  // Generate fresh health data
   const environmentInfo = getEnvironmentInfo();
   const healthData = {
     status: "OK",
@@ -288,10 +349,17 @@ app.get("/api/health", (req, res) => {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB'
     },
-    version: process.env.npm_package_version || '1.0.0'
+    version: process.env.npm_package_version || '1.0.0',
+    keepAlive: true
   };
 
-  res.status(200).json(successResponse({ message: 'Service healthy', data: healthData }));
+  const response = successResponse({ message: 'Service healthy', data: healthData });
+  
+  // Cache the response
+  healthCache = response;
+  healthCacheTime = now;
+  
+  res.status(200).json(response);
 });
 
 // Google OAuth routes are handled in routes/auth.js
