@@ -11,17 +11,10 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import mongoose from 'mongoose';
 
-// Import User model - always load in production
-let User = null;
-try {
-  // Always try to load User model
-  const userModule = await import('../models/User.js');
-  User = userModule.default;
-  console.log('[PASSPORT] User model loaded successfully');
-} catch (error) {
-  console.log('[PASSPORT] User model not loaded - running in standalone mode');
-  console.error('[PASSPORT] Error loading User model:', error.message);
-}
+// Import User model synchronously
+import User from '../models/User.js';
+
+console.log('[PASSPORT] User model imported:', User ? 'Success' : 'Failed');
 
 // JWT Strategy for API authentication - only if database is connected
 if (User) {
@@ -45,12 +38,8 @@ if (User) {
 console.log(' Passport.js - GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
 console.log(' Passport.js - GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
 
-// Google OAuth Strategy - Only initialize if credentials are available AND User model is loaded
-const shouldEnableGoogleOAuth = process.env.GOOGLE_CLIENT_ID &&
-  process.env.GOOGLE_CLIENT_SECRET &&
-  User;
-
-if (shouldEnableGoogleOAuth) {
+// Google OAuth Strategy - Initialize if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && User) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID?.trim(),
     clientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim(),

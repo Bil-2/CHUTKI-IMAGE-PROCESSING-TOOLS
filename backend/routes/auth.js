@@ -139,35 +139,11 @@ if (hasGoogleCredentials && databaseConnected) {
     }
   };
 
-  router.get('/google/callback', 
-    (req, res, next) => {
-      console.log('[OAUTH] Callback route hit');
-      console.log('[OAUTH] Query params:', Object.keys(req.query));
-      
-      passport.authenticate('google', (err, user, info) => {
-        console.log('[OAUTH] Passport authenticate callback');
-        console.log('[OAUTH] Error:', err ? err.message : 'None');
-        console.log('[OAUTH] User:', user ? 'Present' : 'Missing');
-        console.log('[OAUTH] Info:', info);
-        
-        if (err) {
-          console.error('[OAUTH] Authentication error:', err);
-          console.error('[OAUTH] Error stack:', err.stack);
-          return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error&details=${encodeURIComponent(err.message)}`);
-        }
-        
-        if (!user) {
-          console.error('[OAUTH] No user returned from authentication');
-          console.error('[OAUTH] Info object:', JSON.stringify(info));
-          return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
-        }
-        
-        console.log('[OAUTH] User authenticated successfully:', user.email);
-        // Manually attach user to request
-        req.user = user;
-        next();
-      })(req, res, next);
-    },
+  router.get('/google/callback',
+    passport.authenticate('google', {
+      failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
+      session: true
+    }),
     googleCallback
   );
 

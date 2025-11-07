@@ -23,9 +23,8 @@ dotenv.config({ path: './.env' });
 
 // Import configurations and middleware AFTER dotenv
 import connectDB from "./config/database.js";
-// Import passport config AFTER environment variables are loaded
-import "./config/passport.js";
-import passport from "passport";
+// Import simplified passport config
+import passport from "./config/passport-simple.js";
 import { validateFile } from "./utils/validation.js";
 import { successResponse, errorResponse } from "./utils/response.js";
 
