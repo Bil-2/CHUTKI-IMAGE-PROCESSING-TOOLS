@@ -132,10 +132,26 @@ if (hasGoogleCredentials && databaseConnected) {
     }
   };
 
-  router.get('/google/callback', passport.authenticate('google', {
-    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
-    session: false
-  }), googleCallback);
+  router.get('/google/callback', 
+    (req, res, next) => {
+      passport.authenticate('google', (err, user, info) => {
+        if (err) {
+          console.error('[OAUTH] Authentication error:', err);
+          return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
+        }
+        
+        if (!user) {
+          console.error('[OAUTH] No user returned from authentication');
+          return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+        }
+        
+        // Manually attach user to request
+        req.user = user;
+        next();
+      })(req, res, next);
+    },
+    googleCallback
+  );
 
   console.log('✅ Google OAuth routes initialized successfully');
 } else {

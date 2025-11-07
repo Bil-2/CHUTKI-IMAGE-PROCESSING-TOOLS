@@ -10,15 +10,16 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 
-// Only import User model if database is enabled
+// Import User model - always load in production
 let User = null;
 try {
-  if (global.DATABASE_CONNECTED !== false) {
-    const userModule = await import('../models/User.js');
-    User = userModule.default;
-  }
+  // Always try to load User model
+  const userModule = await import('../models/User.js');
+  User = userModule.default;
+  console.log('[PASSPORT] User model loaded successfully');
 } catch (error) {
-  console.log(' User model not loaded - running in standalone mode');
+  console.log('[PASSPORT] User model not loaded - running in standalone mode');
+  console.error('[PASSPORT] Error loading User model:', error.message);
 }
 
 // JWT Strategy for API authentication - only if database is connected
@@ -43,11 +44,10 @@ if (User) {
 console.log(' Passport.js - GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET');
 console.log(' Passport.js - GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET');
 
-// Google OAuth Strategy - Only initialize if credentials are available AND database is connected
+// Google OAuth Strategy - Only initialize if credentials are available AND User model is loaded
 const shouldEnableGoogleOAuth = process.env.GOOGLE_CLIENT_ID &&
   process.env.GOOGLE_CLIENT_SECRET &&
-  User &&
-  global.DATABASE_CONNECTED !== false;
+  User;
 
 if (shouldEnableGoogleOAuth) {
   passport.use(new GoogleStrategy({
