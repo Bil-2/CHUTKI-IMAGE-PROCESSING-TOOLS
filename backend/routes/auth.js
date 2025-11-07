@@ -93,28 +93,41 @@ if (hasGoogleCredentials && databaseConnected) {
     scope: ['profile', 'email']
   }));
 
-  // Google OAuth callback handler
+  // Google OAuth callback handler with enhanced error handling
   const googleCallback = async (req, res) => {
     try {
+      console.log('[OAUTH] Callback received');
+      console.log('[OAUTH] User object:', req.user ? 'Present' : 'Missing');
+      
       if (!req.user) {
+        console.error('[OAUTH] No user object in request');
         return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
       }
+
+      console.log('[OAUTH] User ID:', req.user._id);
+      console.log('[OAUTH] User email:', req.user.email);
 
       // Generate JWT token
       const token = jwt.sign(
         {
           userId: req.user._id,
           email: req.user.email,
-          provider: req.user.provider
+          provider: req.user.provider || 'google'
         },
         process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
 
+      console.log('[OAUTH] Token generated successfully');
+      
       // Redirect to success page with token
-      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`);
+      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`;
+      console.log('[OAUTH] Redirecting to:', redirectUrl);
+      
+      res.redirect(redirectUrl);
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
+      console.error('[OAUTH] Callback error:', error);
+      console.error('[OAUTH] Error stack:', error.stack);
       res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
     }
   };

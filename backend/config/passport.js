@@ -56,17 +56,31 @@ if (shouldEnableGoogleOAuth) {
     callbackURL: (process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/api/auth/google/callback').trim()
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      console.log('Google OAuth Profile:', {
+      console.log('[PASSPORT] Google OAuth Profile received:', {
         id: profile.id,
         displayName: profile.displayName,
         email: profile.emails?.[0]?.value,
         photo: profile.photos?.[0]?.value
       });
 
+      if (!profile.emails || !profile.emails[0] || !profile.emails[0].value) {
+        console.error('[PASSPORT] No email in Google profile');
+        return done(new Error('No email provided by Google'), null);
+      }
+
+      console.log('[PASSPORT] Attempting to find or create user...');
       const user = await User.findOrCreateGoogleUser(profile);
+      
+      console.log('[PASSPORT] User found/created:', {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      });
+      
       return done(null, user);
     } catch (error) {
-      console.error('Google OAuth Error:', error);
+      console.error('[PASSPORT] Google OAuth Error:', error);
+      console.error('[PASSPORT] Error stack:', error.stack);
       return done(error, null);
     }
   }));
