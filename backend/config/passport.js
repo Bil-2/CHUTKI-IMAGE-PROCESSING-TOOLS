@@ -9,6 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
+import mongoose from 'mongoose';
 
 // Import User model - always load in production
 let User = null;
@@ -69,6 +70,14 @@ if (shouldEnableGoogleOAuth) {
       }
 
       console.log('[PASSPORT] Attempting to find or create user...');
+      console.log('[PASSPORT] Mongoose connection state:', mongoose.connection.readyState);
+      // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+      
+      if (mongoose.connection.readyState !== 1) {
+        console.error('[PASSPORT] Database not connected! State:', mongoose.connection.readyState);
+        return done(new Error('Database not connected'), null);
+      }
+      
       const user = await User.findOrCreateGoogleUser(profile);
       
       console.log('[PASSPORT] User found/created:', {
