@@ -78,13 +78,30 @@ const Register = () => {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     try {
-      // Direct redirect to Google OAuth - no fetch needed
+      setLoading(true);
+      setError('');
+      
+      // Ping backend to wake it up if sleeping
+      try {
+        await fetch(`${config.API_BASE_URL}/api/health`, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(5000)
+        });
+      } catch (pingError) {
+        console.log('Backend warming up...');
+      }
+      
+      // Small delay to ensure backend is ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Redirect to Google OAuth
       window.location.href = `${config.API_BASE_URL}/api/auth/google`;
     } catch (error) {
       console.error('Google OAuth error:', error);
       setError('Google Sign-In is currently unavailable. Please use email/password login.');
+      setLoading(false);
     }
   };
 
