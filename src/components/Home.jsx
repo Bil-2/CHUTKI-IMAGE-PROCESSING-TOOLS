@@ -42,7 +42,7 @@ function Home() {
       </ScrollEffect>
 
       {/* ======= STICKY SEARCH BAR ======= */}
-      <div className="sticky top-[72px] z-40 bg-gradient-to-r from-white/95 via-purple-50/80 to-white/95 dark:from-gray-900/95 dark:via-purple-900/50 dark:to-gray-900/95 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 shadow-lg border-b border-purple-200/30 dark:border-purple-500/20">
+      <div className="sticky top-[40px] z-40 bg-gradient-to-r from-white/95 via-purple-50/80 to-white/95 dark:from-gray-900/95 dark:via-purple-900/50 dark:to-gray-900/95 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 shadow-lg border-b border-purple-200/30 dark:border-purple-500/20">
         {memoizedSearchInput}
       </div>
 

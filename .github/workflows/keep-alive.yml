@@ -1,0 +1,42 @@
+name: Keep Server Alive
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: "*/10 * * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Backend Server
+        run: |
+          echo "🔄 Pinging CHUTKI backend..."
+
+          BACKEND_URL="https://chutki-image-processing-tools.onrender.com"
+
+          # Ping health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: GitHub-Actions-KeepAlive" \
+            -H "Accept: application/json" \
+            --max-time 10 \
+            "${BACKEND_URL}/api/health")
+
+          if [ "$response" = "200" ]; then
+            echo "✅ Server is alive (HTTP $response)"
+          else
+            echo "⚠️ Server responded with HTTP $response"
+          fi
+
+          # Small delay
+          sleep 2
+
+          # Warm up tools endpoint
+          curl -s -o /dev/null \
+            -H "User-Agent: GitHub-Actions-WarmUp" \
+            --max-time 8 \
+            "${BACKEND_URL}/api/tools/health" || true
+
+          echo "✅ Keep-alive ping completed"

@@ -201,62 +201,60 @@ function AppContent() {
       />
 
       {/* ========= HEADER ========= */}
-      <header className="sticky top-0 z-50 relative shadow-lg">
+      <header className="sticky top-0 z-50 relative shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-700 via-purple-500 to-pink-500 animate-gradient-move"></div>
 
-        <div className="relative max-w-7xl mx-auto flex justify-between items-center px-3 sm:px-4 lg:px-6 py-3 sm:py-3 lg:py-4">
+        <div className="relative max-w-7xl mx-auto flex justify-between items-center px-4 py-2.5">
           {/* Logo + Name */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Logo className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 drop-shadow-lg hover:scale-110 transition-transform duration-300" />
-            <h1 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-extrabold bg-gradient-to-r from-blue-200 via-pink-200 to-yellow-200 bg-clip-text text-transparent drop-shadow-sm animate-text-shine">
+          <div className="flex items-center gap-2">
+            <Logo className="w-5 h-5 drop-shadow-lg hover:scale-110 transition-transform duration-300" />
+            <h1 className="text-sm font-medium text-white drop-shadow-lg">
               Chutki Image Tools
             </h1>
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+          <div className="flex items-center gap-2.5">
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleTheme}
-              className="rounded-full p-2 sm:p-2.5 lg:p-3 bg-white/30 hover:bg-white/40 backdrop-blur-sm transition-all duration-300 hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="rounded-full p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-300 hover:scale-105"
               aria-label="Toggle Dark Mode"
               title={darkMode ? "Light Mode" : "Dark Mode"}
             >
               {darkMode ? (
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
                 </svg>
               ) : (
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                 </svg>
               )}
             </button>
 
             {/* Profile Button */}
-            {isAuthenticated && (
-              <button
-                onClick={() => navigate('/profile')}
-                className="group relative rounded-full p-2 sm:p-2.5 lg:p-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/40 hover:to-purple-500/40 backdrop-blur-sm border border-white/20 hover:border-indigo-300/40 transition-all duration-300 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/25 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                aria-label="View Profile"
-                title="Profile"
-              >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </button>
-            )}
+            <button
+              onClick={() => navigate('/profile')}
+              className="rounded-full p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105"
+              aria-label="View Profile"
+              title="Profile"
+            >
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </button>
 
             {/* Menu Button */}
             <button
               onClick={toggleMenu}
-              className="relative flex flex-col justify-center items-center gap-1 sm:gap-1.5 p-2 sm:p-2.5 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 group min-w-[44px] min-h-[44px]"
+              className="flex flex-col justify-center items-center gap-1 p-2 rounded-md bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 transition-all duration-300 hover:scale-105"
               title="Menu"
               aria-label="Open Menu"
             >
-              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
-              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
-              <span className="block w-5 sm:w-6 lg:w-7 h-0.5 bg-white rounded-full transition-all duration-300 group-hover:w-6 sm:group-hover:w-7 lg:group-hover:w-8"></span>
+              <span className="block w-5 h-0.5 bg-white rounded-full"></span>
+              <span className="block w-5 h-0.5 bg-white rounded-full"></span>
+              <span className="block w-5 h-0.5 bg-white rounded-full"></span>
             </button>
           </div>
         </div>

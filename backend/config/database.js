@@ -12,14 +12,18 @@ const connectDB = async () => {
       return null;
     }
 
-    // MongoDB connection options for production
+    // MongoDB connection options optimized for fast cold starts
     const options = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      serverSelectionTimeoutMS: 3000, // Timeout after 3s for faster cold start
       socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      maxPoolSize: 10, // Maintain up to 10 socket connections
+      connectTimeoutMS: 3000, // Connection timeout 3s
+      maxPoolSize: 5, // Smaller pool for faster startup
+      minPoolSize: 1, // Keep at least 1 connection alive
       heartbeatFrequencyMS: 10000, // Every 10 seconds
+      retryWrites: true,
+      retryReads: true,
     };
 
     // Try different MongoDB connection strings
