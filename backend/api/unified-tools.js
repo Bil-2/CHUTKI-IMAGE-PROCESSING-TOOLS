@@ -11,6 +11,19 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// PERMANENT FIX: Configure Sharp for better memory management
+sharp.cache(false); // Disable cache to prevent memory leaks
+sharp.concurrency(1); // Process one image at a time to prevent memory spikes
+sharp.simd(true); // Enable SIMD for better performance
+
+// PERMANENT FIX: Memory cleanup interval (every 5 minutes)
+setInterval(() => {
+  if (global.gc) {
+    global.gc();
+    console.log('[MEMORY] Garbage collection triggered');
+  }
+}, 5 * 60 * 1000);
+
 // Configure multer for memory storage - accept multiple field names
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -1048,103 +1061,33 @@ router.post('/:tool', uploadAny, async (req, res) => {
       }
 
       case 'increase-size-kb': {
-        const targetKB = parseInt(req.body.targetKB) || 500;
-        const targetBytes = targetKB * 1024;
-        const quality = parseInt(req.body.quality) || 95;
-        const format = req.body.format || 'jpeg';
-        const preserveMetadata = req.body.preserveMetadata === 'true' || req.body.preserveMetadata === true;
-        const upscaleMethod = req.body.upscaleMethod || 'standard';
-        const currentSize = fileBuffer.length;
-
-        // Get original metadata
-        const metadata = await sharp(fileBuffer).metadata();
-        
-        if (currentSize >= targetBytes) {
-          // Already larger than target, just convert if needed
-          processedBuffer = fileBuffer;
-          filename = customFilename ? `${customFilename}.jpg` : `increased_${targetKB}kb_${Date.now()}.jpg`;
-        } else {
-          // Need to increase file size
-          let processor = sharp(fileBuffer);
+        try {
+          const targetKB = parseInt(req.body.targetSize) || parseInt(req.body.targetKB) || 500;
+          const targetBytes = targetKB * 1024;
+          const metadata = await sharp(fileBuffer).metadata();
+          const currentSize = fileBuffer.length;
           
-          // Preserve or remove metadata based on setting
-          if (!preserveMetadata) {
-            processor = processor.withMetadata({ exif: null, iptc: null, xmp: null, tifftagPhotoshop: null });
+          if (currentSize >= targetBytes) {
+            // Already larger than target
+            processedBuffer = await sharp(fileBuffer).jpeg({ quality: 95 }).toBuffer();
+            filename = customFilename ? `${customFilename}.jpg` : `increased_${targetKB}kb_${Date.now()}.jpg`;
+          } else {
+            // Increase size by scaling up and using high quality
+            const scaleFactor = Math.sqrt(targetBytes / currentSize);
+            const newWidth = Math.round(metadata.width * Math.min(scaleFactor, 2));
+            const newHeight = Math.round(metadata.height * Math.min(scaleFactor, 2));
+            
+            processedBuffer = await sharp(fileBuffer)
+              .resize(newWidth, newHeight, { kernel: 'lanczos3' })
+              .jpeg({ quality: 100, chromaSubsampling: '4:4:4', mozjpeg: false })
+              .toBuffer();
+            
+            filename = customFilename ? `${customFilename}.jpg` : `increased_${targetKB}kb_${Date.now()}.jpg`;
           }
-          
-          // Apply upscaling if needed
-          if (upscaleMethod === 'ai' && currentSize < targetBytes / 4) {
-            // For significantly smaller files, apply light upscaling
-            const scaleFactor = Math.min(2, Math.sqrt(targetBytes / currentSize));
-            processor = processor
-              .resize(Math.round(metadata.width * scaleFactor), Math.round(metadata.height * scaleFactor), { kernel: 'lanczos3' });
-          }
-          
-          // Apply format-specific processing
-          switch(format.toLowerCase()) {
-            case 'png':
-              processedBuffer = await processor
-                .png({ quality: Math.min(100, Math.max(1, quality)), compressionLevel: 1 }) // Lower compression for larger files
-                .toBuffer();
-              contentType = 'image/png';
-              filename = customFilename ? `${customFilename}.png` : `increased_${targetKB}kb_${Date.now()}.png`;
-              break;
-            case 'webp':
-              processedBuffer = await processor
-                .webp({ quality: Math.min(100, Math.max(1, quality)), reductionEffort: 0 }) // Lowest reduction effort for larger files
-                .toBuffer();
-              contentType = 'image/webp';
-              filename = customFilename ? `${customFilename}.webp` : `increased_${targetKB}kb_${Date.now()}.webp`;
-              break;
-            case 'jpeg':
-            default:
-              // For JPEG, we can increase file size by:
-              // 1. Using highest quality
-              // 2. Disabling mozjpeg optimization (larger files)
-              // 3. Adding minimal noise if still not large enough
-              processedBuffer = await processor
-                .jpeg({ quality: Math.min(100, Math.max(1, quality)), mozjpeg: false, chromaSubsampling: '4:4:4' })
-                .toBuffer();
-              
-              // If still not large enough, add minimal noise
-              if (processedBuffer.length < targetBytes) {
-                const noiseBuffer = await sharp({
-                  create: {
-                    width: metadata.width,
-                    height: metadata.height,
-                    channels: 3,
-                    noise: 'gaussian',
-                    seed: Date.now() % 1000
-                  }
-                })
-                .jpeg({ quality: 10 })
-                .toBuffer();
-                
-                processedBuffer = await sharp(processedBuffer)
-                  .composite([{ input: noiseBuffer, blend: 'add' }])
-                  .toBuffer();
-              }
-              filename = customFilename ? `${customFilename}.jpg` : `increased_${targetKB}kb_${Date.now()}.jpg`;
-          }
+        } catch (error) {
+          console.error('Increase size error:', error);
+          return res.status(500).json({ error: 'Size increase failed: ' + error.message });
         }
-        
-        // Add size increase info to response headers
-        const originalSize = fileBuffer.length;
-        const increasedSize = processedBuffer.length;
-        const increase = increasedSize - originalSize;
-        const increasePercentage = originalSize > 0 ? ((increase / originalSize) * 100).toFixed(1) : 0;
-        
-        res.setHeader('X-Size-Increase-Info', JSON.stringify({
-          originalSize,
-          increasedSize,
-          increase,
-          increasePercentage,
-          targetKB,
-          quality,
-          format,
-          upscaleMethod
-        }));
-
         break;
       }
 
@@ -1427,20 +1370,43 @@ router.post('/:tool', uploadAny, async (req, res) => {
       }
 
       case 'split-image': {
-        const { rows = 2, cols = 2, parts = 4 } = req.body;
-        const metadata = await sharp(fileBuffer).metadata();
-        const numRows = parseInt(rows);
-        const numCols = parseInt(cols);
-        const pieceWidth = Math.floor(metadata.width / numCols);
-        const pieceHeight = Math.floor(metadata.height / numRows);
+        try {
+          const metadata = await sharp(fileBuffer).metadata();
+          const parts = Math.max(1, parseInt(req.body.parts) || 2);
+          const direction = req.body.direction || 'horizontal';
+          const rows = Math.max(1, parseInt(req.body.rows) || 2);
+          const cols = Math.max(1, parseInt(req.body.cols) || 2);
+          
+          let pieceWidth, pieceHeight;
+          
+          if (direction === 'horizontal') {
+            pieceWidth = Math.max(1, Math.floor(metadata.width / parts));
+            pieceHeight = metadata.height;
+          } else if (direction === 'vertical') {
+            pieceWidth = metadata.width;
+            pieceHeight = Math.max(1, Math.floor(metadata.height / parts));
+          } else {
+            // Grid split
+            pieceWidth = Math.max(1, Math.floor(metadata.width / cols));
+            pieceHeight = Math.max(1, Math.floor(metadata.height / rows));
+          }
 
-        // Return the first piece (for testing purposes)
-        processedBuffer = await sharp(fileBuffer)
-          .extract({ left: 0, top: 0, width: pieceWidth, height: pieceHeight })
-          .jpeg({ quality: 90 })
-          .toBuffer();
+          // Ensure dimensions are valid
+          if (pieceWidth < 1 || pieceHeight < 1 || pieceWidth > metadata.width || pieceHeight > metadata.height) {
+            return res.status(400).json({ error: 'Invalid split dimensions' });
+          }
 
-        filename = customFilename ? `${customFilename}.jpg` : `split_${numRows}x${numCols}_piece1_${Date.now()}.jpg`;
+          // Return the first piece
+          processedBuffer = await sharp(fileBuffer)
+            .extract({ left: 0, top: 0, width: pieceWidth, height: pieceHeight })
+            .jpeg({ quality: 90 })
+            .toBuffer();
+
+          filename = customFilename ? `${customFilename}.jpg` : `split_piece1_${Date.now()}.jpg`;
+        } catch (error) {
+          console.error('Split image error:', error);
+          return res.status(500).json({ error: 'Split failed: ' + error.message });
+        }
         break;
       }
 
@@ -1688,18 +1654,34 @@ router.post('/:tool', uploadAny, async (req, res) => {
       }
 
       case 'freehand-crop': {
-        const { x = 0, y = 0, width = 200, height = 200 } = req.body;
-        processedBuffer = await sharp(fileBuffer)
-          .extract({
-            left: parseInt(x),
-            top: parseInt(y),
-            width: parseInt(width),
-            height: parseInt(height)
-          })
-          .jpeg({ quality: 90 })
-          .toBuffer();
+        try {
+          const metadata = await sharp(fileBuffer).metadata();
+          const x = parseInt(req.body.x) || 0;
+          const y = parseInt(req.body.y) || 0;
+          const width = parseInt(req.body.width) || Math.min(200, metadata.width);
+          const height = parseInt(req.body.height) || Math.min(200, metadata.height);
+          
+          // Ensure crop dimensions are within image bounds
+          const safeLeft = Math.max(0, Math.min(x, metadata.width - 1));
+          const safeTop = Math.max(0, Math.min(y, metadata.height - 1));
+          const safeWidth = Math.min(width, metadata.width - safeLeft);
+          const safeHeight = Math.min(height, metadata.height - safeTop);
+          
+          processedBuffer = await sharp(fileBuffer)
+            .extract({
+              left: safeLeft,
+              top: safeTop,
+              width: safeWidth,
+              height: safeHeight
+            })
+            .jpeg({ quality: 90 })
+            .toBuffer();
 
-        filename = customFilename ? `${customFilename}.jpg` : `cropped_${Date.now()}.jpg`;
+          filename = customFilename ? `${customFilename}.jpg` : `cropped_${Date.now()}.jpg`;
+        } catch (error) {
+          console.error('Freehand crop error:', error);
+          return res.status(500).json({ error: 'Crop failed: ' + error.message });
+        }
         break;
       }
 
@@ -1856,6 +1838,144 @@ router.post('/:tool', uploadAny, async (req, res) => {
         }
       }
 
+      // Missing Tools - Adding for 100% coverage
+      case 'compress-2050kb': {
+        try {
+          const targetBytes = 2050 * 1024;
+          processedBuffer = await compressToSize(fileBuffer, targetBytes);
+          filename = customFilename ? `${customFilename}.jpg` : `compressed_2050kb_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Compression failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'compress-image': {
+        try {
+          const quality = parseInt(req.body.quality) || 80;
+          processedBuffer = await sharp(fileBuffer)
+            .jpeg({ quality, mozjpeg: true })
+            .toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `compressed_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Compression failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'resize-35x45cm': {
+        try {
+          const dpi = parseInt(req.body.dpi) || 300;
+          const widthPx = Math.round((35 / 2.54) * dpi);
+          const heightPx = Math.round((45 / 2.54) * dpi);
+          processedBuffer = await sharp(fileBuffer)
+            .resize(widthPx, heightPx, { fit: 'fill' })
+            .jpeg({ quality: 95 })
+            .toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `resized_35x45cm_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Resize failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'resize-signature-50x20mm': {
+        try {
+          const dpi = parseInt(req.body.dpi) || 300;
+          const widthPx = Math.round((50 / 25.4) * dpi);
+          const heightPx = Math.round((20 / 25.4) * dpi);
+          processedBuffer = await sharp(fileBuffer)
+            .resize(widthPx, heightPx, { fit: 'fill' })
+            .jpeg({ quality: 95 })
+            .toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `signature_50x20mm_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Resize failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'flip-tool': {
+        try {
+          const direction = req.body.direction || 'horizontal';
+          let processor = sharp(fileBuffer);
+          if (direction === 'horizontal') {
+            processor = processor.flop();
+          } else {
+            processor = processor.flip();
+          }
+          processedBuffer = await processor.jpeg({ quality: 95 }).toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `flipped_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Flip failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'rotate-tool': {
+        try {
+          const angle = parseInt(req.body.angle) || 90;
+          const background = req.body.background || 'white';
+          processedBuffer = await sharp(fileBuffer)
+            .rotate(angle, { background })
+            .jpeg({ quality: 95 })
+            .toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `rotated_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Rotation failed: ' + error.message });
+        }
+        break;
+      }
+
+      case 'add-text': {
+        try {
+          const text = req.body.text || 'Sample Text';
+          const fontSize = parseInt(req.body.fontSize) || 48;
+          const color = req.body.color || 'white';
+          const position = req.body.position || 'bottom-right';
+          
+          const metadata = await sharp(fileBuffer).metadata();
+          
+          // Create SVG text overlay
+          let x = 20, y = metadata.height - 20;
+          let textAnchor = 'start';
+          
+          if (position === 'top-left') {
+            x = 20; y = fontSize + 20;
+          } else if (position === 'top-right') {
+            x = metadata.width - 20; y = fontSize + 20;
+            textAnchor = 'end';
+          } else if (position === 'center') {
+            x = metadata.width / 2; y = metadata.height / 2;
+            textAnchor = 'middle';
+          }
+          
+          const svgText = `
+            <svg width="${metadata.width}" height="${metadata.height}">
+              <text x="${x}" y="${y}" font-size="${fontSize}" fill="${color}" 
+                    text-anchor="${textAnchor}" font-family="Arial, sans-serif" 
+                    font-weight="bold" stroke="black" stroke-width="2">
+                ${text}
+              </text>
+            </svg>
+          `;
+          
+          processedBuffer = await sharp(fileBuffer)
+            .composite([{
+              input: Buffer.from(svgText),
+              top: 0,
+              left: 0
+            }])
+            .jpeg({ quality: 95 })
+            .toBuffer();
+          
+          filename = customFilename ? `${customFilename}.jpg` : `text_added_${Date.now()}.jpg`;
+        } catch (error) {
+          return res.status(500).json({ error: 'Add text failed: ' + error.message });
+        }
+        break;
+      }
+
       default:
         return res.status(400).json({ error: `Tool '${tool}' not supported` });
     }
@@ -1866,11 +1986,29 @@ router.post('/:tool', uploadAny, async (req, res) => {
     res.setHeader('X-File-Retention', 'File processed in memory - no storage');
     res.send(processedBuffer);
 
+    // PERMANENT FIX: Cleanup after sending response
+    setImmediate(() => {
+      processedBuffer = null;
+      if (global.gc) global.gc();
+    });
+
   } catch (error) {
     console.error(`Tool ${req.params.tool} error:`, error);
     res.status(500).json({
       error: 'Failed to process image',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    // PERMANENT FIX: Always cleanup file buffer
+    setImmediate(() => {
+      if (req.files) {
+        req.files.forEach(file => {
+          if (file.buffer) file.buffer = null;
+        });
+      }
+      if (req.file && req.file.buffer) {
+        req.file.buffer = null;
+      }
     });
   }
 });

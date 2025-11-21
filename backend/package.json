@@ -6,9 +6,9 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "serve": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node --expose-gc --max-old-space-size=512 server.js",
+    "serve": "node --expose-gc --max-old-space-size=512 server.js",
+    "dev": "nodemon --expose-gc --max-old-space-size=512 server.js",
     "test": "node test-endpoints.js",
     "test:endpoints": "node test-endpoints.js",
     "setup": "node scripts/setup.js",

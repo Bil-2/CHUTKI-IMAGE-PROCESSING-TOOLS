@@ -5,7 +5,7 @@ import ScrollEffect from '../shared/ScrollEffect';
 import config from '../../config';
 import FileUploadZone from '../shared/FileUploadZone';
 
-const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
+const FlipImageSettings = ({ selectedFile, loading, onSubmit = () => {} }) => {
   const [direction, setDirection] = useState('horizontal');
 
   const flipOptions = [

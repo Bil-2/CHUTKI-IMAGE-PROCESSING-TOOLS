@@ -5,7 +5,7 @@ import ScrollEffect from "./shared/ScrollEffect";
 
 const tools = toolsConfig;
 
-const ImageTools = ({ searchQuery }) => {
+const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
   // Privacy notice with smooth fade-out
   const PrivacyNotice = () => {
     const [visible, setVisible] = useState(true);
@@ -26,9 +26,8 @@ const ImageTools = ({ searchQuery }) => {
 
     return (
       <div
-        className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 transition-opacity duration-500 ${
-          fadeOut ? "opacity-0" : "opacity-100"
-        }`}
+        className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 transition-opacity duration-500 ${fadeOut ? "opacity-0" : "opacity-100"
+          }`}
       >
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
@@ -41,7 +40,7 @@ const ImageTools = ({ searchQuery }) => {
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200"> Privacy Notice</h3>
+            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Privacy Notice</h3>
             <p className="text-sm text-blue-700 dark:text-blue-300">
               Your images are automatically deleted after 30 minutes. We care about your privacy and security.
             </p>
@@ -65,8 +64,14 @@ const ImageTools = ({ searchQuery }) => {
     return "/tools";
   };
 
+  // Filter tools based on search query AND selected category
   const filteredTools = {};
   Object.keys(tools).forEach((category) => {
+    // Skip category if not "All" and doesn't match selected category
+    if (selectedCategory !== "All" && category !== selectedCategory) {
+      return;
+    }
+
     const filteredCategory = tools[category].filter((tool) =>
       tool.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -83,10 +88,10 @@ const ImageTools = ({ searchQuery }) => {
       </ScrollEffect>
 
       {Object.keys(filteredTools).map((category, categoryIndex) => (
-        <ScrollEffect 
-          key={category} 
-          animation="fade-up" 
-          duration={400} 
+        <ScrollEffect
+          key={category}
+          animation="fade-up"
+          duration={400}
           delay={Math.min(categoryIndex * 30, 150)}
         >
           <div className="mb-10 sm:mb-14 lg:mb-16">
@@ -106,10 +111,10 @@ const ImageTools = ({ searchQuery }) => {
             {/* Tool Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-5 lg:gap-6">
               {filteredTools[category].map((tool, index) => (
-                <ScrollEffect 
+                <ScrollEffect
                   key={index}
-                  animation="zoom-in" 
-                  duration={300} 
+                  animation="zoom-in"
+                  duration={300}
                   delay={Math.min(index * 15, 100)}
                 >
                   <Link
@@ -118,10 +123,10 @@ const ImageTools = ({ searchQuery }) => {
                   >
                     {/* Animated gradient background */}
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-100 via-pink-50 to-blue-50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-blue-900/20 opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
-                    
+
                     {/* Decorative corner element */}
                     <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/10 to-pink-400/10 dark:from-purple-600/20 dark:to-pink-600/20 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    
+
                     {/* Content Container */}
                     <div className="relative flex flex-col items-center text-center flex-1">
                       {/* Icon Container with Badge */}
@@ -132,19 +137,19 @@ const ImageTools = ({ searchQuery }) => {
                         {/* Pulse animation ring */}
                         <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 opacity-0 group-hover:opacity-75 group-hover:scale-125 transition-all duration-500"></div>
                       </div>
-                      
+
                       {/* Tool Name */}
                       <div className="flex-1 w-full mb-3">
                         <h3 className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300 leading-snug px-1">
                           {tool.name}
                         </h3>
                       </div>
-                      
+
                       {/* Description */}
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed px-1 min-h-[2.5rem]">
                         {tool.description || "Professional tool for image processing"}
                       </p>
-                      
+
                       {/* Action Button */}
                       <div className="mt-4 w-full">
                         <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-600 dark:to-pink-600 text-white rounded-lg text-xs sm:text-sm font-semibold opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
@@ -175,8 +180,8 @@ const ImageTools = ({ searchQuery }) => {
               No tools found
             </h3>
             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-6">Try searching with different keywords</p>
-            <button 
-              onClick={() => window.location.reload()} 
+            <button
+              onClick={() => window.location.reload()}
               className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 hover:scale-105"
             >
               View All Tools

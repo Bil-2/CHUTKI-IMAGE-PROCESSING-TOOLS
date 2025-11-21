@@ -28,6 +28,9 @@ import passport from "./config/passport-simple.js";
 import { validateFile } from "./utils/validation.js";
 import { successResponse, errorResponse } from "./utils/response.js";
 
+// PERMANENT FIX: Import memory monitor to prevent tools from failing after 1 hour
+import './memory-monitor.js';
+
 // Advanced keep-alive mechanism to prevent cold starts
 const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || `https://chutki-image-processing-tools.onrender.com`;
 
@@ -77,6 +80,8 @@ import aiChatRoutes from "./api/ai-chat.js";
 // Import separate tool routers
 import resizePixelRoutes from "./api/tools/resize-pixel.js";
 import passportPhotoAdvancedRoutes from "./api/tools/passport-photo-advanced.js";
+import flipRoutes from "./api/tools/flip.js";
+import rotateRoutes from "./api/tools/rotate.js";
 
 // Validate environment configuration
 const { errors, warnings } = validateEnvironment();
@@ -303,6 +308,8 @@ app.use('/api/tools', unifiedToolsRoutes);
 // Use separate tool routers
 app.use('/api/tools/resize-pixel', resizePixelRoutes);
 app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
+app.use('/api/tools/flip', flipRoutes);
+app.use('/api/tools/rotate', rotateRoutes);
 
 // Debug endpoint to verify routing
 app.get('/api/debug/routes', (req, res) => {

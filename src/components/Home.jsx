@@ -12,16 +12,16 @@ function Home() {
     <div className="max-w-full sm:max-w-md lg:max-w-lg mx-auto relative">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-full opacity-75 blur-sm animate-pulse"></div>
       <div className="relative flex items-center gap-2 bg-white dark:bg-gray-900 border border-purple-300/60 dark:border-purple-500/50 rounded-full px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5">
-        <input
-          type="text"
-          placeholder="Search tools..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          <input
+            type="text"
+            placeholder="Search tools..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-purple-400 dark:placeholder-purple-300 text-sm sm:text-base lg:text-lg"
         />
         <svg className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
+          </svg>
       </div>
     </div>
   ), [searchQuery]);
