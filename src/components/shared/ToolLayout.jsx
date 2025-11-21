@@ -82,17 +82,11 @@ const ToolLayout = ({
           setResult({ type: 'json', data: jsonResult });
           toast.success('Processing completed!');
         } else {
-          // Handle file download
+          // Handle image result - show preview first
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `processed_${selectedFile.name}`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          toast.success('File downloaded successfully!');
+          setResult({ type: 'image', url, blob });
+          toast.success('Processing completed! Click download to save.');
         }
       } else {
         const error = await response.json();
@@ -187,6 +181,35 @@ const ToolLayout = ({
                 <pre className="bg-gray-100 dark:bg-gray-900 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-auto max-h-60 sm:max-h-96">
                   {JSON.stringify(result.data, null, 2)}
                 </pre>
+              </div>
+            )}
+
+            {/* Image Result Display */}
+            {result && result.type === 'image' && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg">
+                <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">Result</h3>
+                <img
+                  src={result.url}
+                  alt="Processed"
+                  className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 mb-4"
+                />
+                <button
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = result.url;
+                    a.download = `processed_${selectedFile.name}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    toast.success('File downloaded successfully!');
+                  }}
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download Result
+                </button>
               </div>
             )}
           </div>

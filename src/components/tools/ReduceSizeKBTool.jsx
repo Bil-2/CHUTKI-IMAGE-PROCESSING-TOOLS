@@ -19,23 +19,7 @@ const ReduceSizeKBTool = () => {
     compressionMethod: 'standard'
   });
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
-      reader.readAsDataURL(selectedFile);
-      
-      // Get file info
-      const sizeInKB = (selectedFile.size / 1024).toFixed(2);
-      setFileInfo({
-        name: selectedFile.name,
-        size: sizeInKB,
-        type: selectedFile.type
-      });
-    }
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -143,18 +127,31 @@ const ReduceSizeKBTool = () => {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
-                />
-              </div>
+              {/* File Upload Zone */}
+              <FileUploadZone
+                file={file}
+                onFileSelect={(selectedFile) => {
+                  if (selectedFile) {
+                    setFile(selectedFile);
+                    const reader = new FileReader();
+                    reader.onloadend = () => setPreview(reader.result);
+                    reader.readAsDataURL(selectedFile);
+                    
+                    const sizeInKB = (selectedFile.size / 1024).toFixed(2);
+                    setFileInfo({
+                      name: selectedFile.name,
+                      size: sizeInKB,
+                      type: selectedFile.type
+                    });
+                  } else {
+                    setFile(null);
+                    setPreview(null);
+                    setFileInfo(null);
+                  }
+                }}
+                preview={preview}
+                accept="image/*"
+              />
 
               {/* File Info */}
               {fileInfo && (
@@ -165,14 +162,6 @@ const ReduceSizeKBTool = () => {
                     <p><span className="font-medium">Size:</span> {fileInfo.size} KB</p>
                     <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
                   </div>
-                </div>
-              )}
-
-              {/* Preview */}
-              {preview && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
-                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
                 </div>
               )}
 
@@ -313,7 +302,7 @@ const ReduceSizeKBTool = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-80 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-500">
+              <div className="flex flex-col items-center justify-center h-80 bg-white dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-500">
                 {loading ? (
                   <>
                     <svg className="animate-spin h-12 w-12 text-indigo-600 mb-4" fill="none" viewBox="0 0 24 24">
@@ -324,11 +313,13 @@ const ReduceSizeKBTool = () => {
                   </>
                 ) : (
                   <>
-                    <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                      <polyline points="21 15 16 10 5 21" stroke="currentColor" strokeWidth="1.5" fill="none"/>
                     </svg>
-                    <p className="text-gray-500 dark:text-gray-400 text-center">
-                      Upload and process an image to see results here
+                    <p className="text-gray-500 dark:text-gray-400 text-center text-base px-8">
+                      Upload and process a photo to reduce image size
                     </p>
                   </>
                 )}

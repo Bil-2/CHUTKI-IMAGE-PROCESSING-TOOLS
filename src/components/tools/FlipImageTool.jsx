@@ -64,7 +64,7 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
         <div className="bg-white rounded-lg p-6 shadow-lg">
         <h3 className="text-lg font-semibold mb-4">Flip Preview</h3>
         <div className="flex items-center justify-center space-x-8">
-          <div className="text-center">
+          <div className="text-center text-base px-8">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg mb-2 flex items-center justify-center text-white font-bold">
               A
             </div>
@@ -73,7 +73,7 @@ const FlipImageSettings = ({ selectedFile, loading, onSubmit }) => {
 
           <div className="text-2xl text-gray-400">→</div>
 
-          <div className="text-center">
+          <div className="text-center text-base px-8">
             <div
               className={`w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg mb-2 flex items-center justify-center text-white font-bold ${direction === 'horizontal' ? 'transform scale-x-[-1]' : 'transform scale-y-[-1]'
                 }`}

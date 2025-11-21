@@ -2,34 +2,58 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import config from '../../config';
-import FileUploadZone from '../shared/FileUploadZone';
+import FileUploadZone from './FileUploadZone';
 
-const ResizeCMTool = () => {
+/**
+ * Universal Tool Template Component
+ * Use this for all image processing tools to maintain consistency
+ */
+const ToolTemplate = ({
+  toolName,
+  toolTitle,
+  toolDescription,
+  toolCategory = "Image Editing",
+  apiEndpoint,
+  acceptedFileTypes = "image/*",
+  customSettings = null,
+  defaultSettings = {},
+  showFileInfo = true,
+  showEnhance = false,
+  resultType = "image", // "image", "download", "multiple"
+  onCustomProcess = null
+}) => {
   const navigate = useNavigate();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [formData, setFormData] = useState({
-    width: '',
-    height: '',
-    dpi: ''
-  });
+  const [fileInfo, setFileInfo] = useState(null);
+  const [settings, setSettings] = useState(defaultSettings);
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileChange = (selectedFile) => {
     if (selectedFile) {
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
+      
+      const sizeInKB = (selectedFile.size / 1024).toFixed(2);
+      setFileInfo({
+        name: selectedFile.name,
+        size: sizeInKB,
+        type: selectedFile.type
+      });
+    } else {
+      setFile(null);
+      setPreview(null);
+      setFileInfo(null);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      toast.error('Please select an image');
+      toast.error('Please select a file');
       return;
     }
 
@@ -37,23 +61,29 @@ const ResizeCMTool = () => {
     const data = new FormData();
     data.append('file', file);
     
-    Object.keys(formData).forEach(key => {
-      if (formData[key]) data.append(key, formData[key]);
+    Object.keys(settings).forEach(key => {
+      if (settings[key] !== null && settings[key] !== undefined) {
+        data.append(key, settings[key]);
+      }
     });
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_BASE_URL}/api/tools/resize-cm`, {
+      const response = await fetch(`${config.API_BASE_URL}${apiEndpoint}`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: data
       });
 
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        setResult(url);
-        toast.success('Image processed successfully!');
+        if (onCustomProcess) {
+          await onCustomProcess(response, setResult);
+        } else {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          setResult({ url, type: resultType });
+        }
+        toast.success('Processing completed successfully!');
       } else {
         const error = await response.json();
         toast.error(error.message || 'Processing failed');
@@ -67,10 +97,10 @@ const ResizeCMTool = () => {
   };
 
   const handleDownload = () => {
-    if (result) {
+    if (result && result.url) {
       const a = document.createElement('a');
-      a.href = result;
-      a.download = 'resize-cm-' + Date.now() + '.jpg';
+      a.href = result.url;
+      a.download = `${toolName}-${Date.now()}.jpg`;
       a.click();
     }
   };
@@ -81,18 +111,18 @@ const ResizeCMTool = () => {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 mb-4 flex items-center group"
           >
             <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Dashboard
+            Back to Home
           </button>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Resize CM</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Process your images with professional quality</p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{toolTitle}</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">{toolDescription}</p>
           <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
-            Image Editing
+            {toolCategory}
           </span>
         </div>
 
@@ -104,73 +134,30 @@ const ResizeCMTool = () => {
               <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Upload Image
+              Upload & Configure
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
-                />
-              </div>
+              <FileUploadZone
+                file={file}
+                onFileSelect={handleFileChange}
+                preview={preview}
+                accept={acceptedFileTypes}
+              />
 
-              {/* Preview */}
-              {preview && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
-                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+              {showFileInfo && fileInfo && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">File Information</h3>
+                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p><span className="font-medium">Name:</span> {fileInfo.name}</p>
+                    <p><span className="font-medium">Size:</span> {fileInfo.size} KB</p>
+                    <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
+                  </div>
                 </div>
               )}
-
               
-              {/* Width */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Width
-                </label>
-                <input
-                  type="text"
-                  value={formData.width}
-                  onChange={(e) => setFormData({...formData, width: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter width"
-                />
-              </div>
-
-              {/* Height */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Height
-                </label>
-                <input
-                  type="text"
-                  value={formData.height}
-                  onChange={(e) => setFormData({...formData, height: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter height"
-                />
-              </div>
-
-              {/* Dpi */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Dpi
-                </label>
-                <input
-                  type="text"
-                  value={formData.dpi}
-                  onChange={(e) => setFormData({...formData, dpi: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter dpi"
-                />
-              </div>
+              {/* Custom Settings */}
+              {customSettings && customSettings(settings, setSettings)}
 
               {/* Submit Button */}
               <button
@@ -202,7 +189,8 @@ const ResizeCMTool = () => {
             
             {result ? (
               <div className="space-y-6">
-                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                <img src={result.url} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                
                 <button
                   onClick={handleDownload}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
@@ -210,7 +198,7 @@ const ResizeCMTool = () => {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Image
+                  Download Result
                 </button>
               </div>
             ) : (
@@ -225,11 +213,13 @@ const ResizeCMTool = () => {
                   </>
                 ) : (
                   <>
-                    <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                      <polyline points="21 15 16 10 5 21" stroke="currentColor" strokeWidth="1.5" fill="none"/>
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 text-center text-base px-8">
-                      Upload and process a photo to see results
+                      Upload and process a photo to generate {toolTitle.toLowerCase()}
                     </p>
                   </>
                 )}
@@ -242,4 +232,4 @@ const ResizeCMTool = () => {
   );
 };
 
-export default ResizeCMTool;
+export default ToolTemplate;
