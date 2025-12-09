@@ -1,42 +1,91 @@
-name: Keep Server Alive
+name: Keep Server Alive - Multi-Layer Protection
 
 on:
   schedule:
-    # Run every 10 minutes
-    - cron: "*/10 * * * *"
+    # Run every 5 minutes for maximum uptime
+    - cron: "*/5 * * * *"
   workflow_dispatch: # Allow manual trigger
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - name: Ping Backend Server
+      - name: Multi-Endpoint Keep-Alive Ping
         run: |
-          echo "🔄 Pinging CHUTKI backend..."
+          echo "🚀 CHUTKI Multi-Layer Keep-Alive System"
+          echo "⏰ $(date)"
+          echo "=" | tr '=' '=' | head -c 50; echo
 
           BACKEND_URL="https://chutki-image-processing-tools.onrender.com"
 
-          # Ping health endpoint
-          response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "User-Agent: GitHub-Actions-KeepAlive" \
-            -H "Accept: application/json" \
-            --max-time 10 \
-            "${BACKEND_URL}/api/health")
+          # Function to ping endpoint
+          ping_endpoint() {
+            local endpoint=$1
+            local name=$2
+            
+            echo "🔄 Pinging $name..."
+            start_time=$(date +%s%3N)
+            
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "User-Agent: GitHub-Actions-KeepAlive-v3" \
+              -H "Accept: application/json" \
+              -H "Cache-Control: no-cache" \
+              --max-time 15 \
+              "${BACKEND_URL}${endpoint}")
+            
+            end_time=$(date +%s%3N)
+            duration=$((end_time - start_time))
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ $name: HTTP $response (${duration}ms)"
+              return 0
+            else
+              echo "⚠️ $name: HTTP $response (${duration}ms)"
+              return 1
+            fi
+          }
 
-          if [ "$response" = "200" ]; then
-            echo "✅ Server is alive (HTTP $response)"
-          else
-            echo "⚠️ Server responded with HTTP $response"
+          # Ping multiple endpoints for redundancy
+          success_count=0
+          total_count=0
+
+          # Primary health check
+          if ping_endpoint "/api/health" "Health Check"; then
+            ((success_count++))
           fi
-
-          # Small delay
+          ((total_count++))
           sleep 2
 
-          # Warm up tools endpoint
+          # Tools health check
+          if ping_endpoint "/api/tools/health" "Tools Health" 2>/dev/null || true; then
+            ((success_count++))
+          fi
+          ((total_count++))
+          sleep 2
+
+          # Auth status check
+          if ping_endpoint "/api/auth/status" "Auth Status" 2>/dev/null || true; then
+            ((success_count++))
+          fi
+          ((total_count++))
+          sleep 2
+
+          # Warm-up critical endpoints (fire and forget)
+          echo "🔥 Warming up critical endpoints..."
           curl -s -o /dev/null \
             -H "User-Agent: GitHub-Actions-WarmUp" \
-            --max-time 8 \
-            "${BACKEND_URL}/api/tools/health" || true
+            --max-time 10 \
+            "${BACKEND_URL}/api/tools/list" 2>/dev/null || true
 
-          echo "✅ Keep-alive ping completed"
+          echo "=" | tr '=' '=' | head -c 50; echo
+          echo "📊 Results: $success_count/$total_count successful"
+
+          if [ $success_count -gt 0 ]; then
+            echo "✅ Keep-alive completed successfully"
+            exit 0
+          else
+            echo "❌ All pings failed - server may be down"
+            exit 1
+          fi

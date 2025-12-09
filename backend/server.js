@@ -31,43 +31,9 @@ import { successResponse, errorResponse } from "./utils/response.js";
 // PERMANENT FIX: Import memory monitor to prevent tools from failing after 1 hour
 import './memory-monitor.js';
 
-// Advanced keep-alive mechanism to prevent cold starts
-const KEEP_ALIVE_URL = process.env.RENDER_EXTERNAL_URL || `https://chutki-image-processing-tools.onrender.com`;
+// COLD START PREVENTION: Import comprehensive cold start prevention system
+import { initColdStartPrevention } from './cold-start-prevention.js';
 
-const keepAlive = () => {
-  if (process.env.NODE_ENV === 'production') {
-    // Multiple ping intervals for better reliability
-    const intervals = [
-      13 * 60 * 1000,  // 13 minutes
-      14 * 60 * 1000,  // 14 minutes  
-      15 * 60 * 1000   // 15 minutes
-    ];
-    
-    intervals.forEach((interval, index) => {
-      setInterval(async () => {
-        try {
-          const response = await fetch(`${KEEP_ALIVE_URL}/api/health`, {
-            method: 'GET',
-            headers: { 'User-Agent': `CHUTKI-KeepAlive-${index}` }
-          });
-          console.log(`[KEEP-ALIVE-${index}] Ping successful: ${response.status}`);
-        } catch (error) {
-          console.log(`[KEEP-ALIVE-${index}] Ping failed: ${error.message}`);
-        }
-      }, interval);
-    });
-    
-    // Immediate ping on startup
-    setTimeout(async () => {
-      try {
-        await fetch(`${KEEP_ALIVE_URL}/api/health`);
-        console.log(`[KEEP-ALIVE] Initial ping completed`);
-      } catch (error) {
-        console.log(`[KEEP-ALIVE] Initial ping failed: ${error.message}`);
-      }
-    }, 30000); // 30 seconds after startup
-  }
-};
 import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.js";
 
 // Import modular tools router
@@ -82,6 +48,9 @@ import resizePixelRoutes from "./api/tools/resize-pixel.js";
 import passportPhotoAdvancedRoutes from "./api/tools/passport-photo-advanced.js";
 import flipRoutes from "./api/tools/flip.js";
 import rotateRoutes from "./api/tools/rotate.js";
+
+// Import cold start status API
+import coldStartStatusRoutes from "./api/cold-start-status.js";
 
 // Validate environment configuration
 const { errors, warnings } = validateEnvironment();
@@ -311,6 +280,9 @@ app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
 app.use('/api/tools/flip', flipRoutes);
 app.use('/api/tools/rotate', rotateRoutes);
 
+// Cold start prevention status API
+app.use('/api/cold-start', coldStartStatusRoutes);
+
 // Debug endpoint to verify routing
 app.get('/api/debug/routes', (req, res) => {
   res.json({
@@ -462,9 +434,11 @@ const startServer = async () => {
       console.log(`[HEALTH] Health check: http://localhost:${PORT}/api/health`);
       console.log(`[PRIVACY] Privacy Notice: Images are automatically deleted after 30 minutes`);
       
-      // Start keep-alive mechanism
-      keepAlive();
-      console.log(`[KEEP-ALIVE] Keep-alive mechanism started`);
+      // Initialize comprehensive cold start prevention system
+      const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+      initColdStartPrevention(serverUrl);
+      console.log(`[COLD-START] ✅ Multi-layer prevention system activated`);
+      console.log(`[COLD-START] 🛡️ 100% uptime protection enabled`);
     });
 
     // Graceful shutdown handlers

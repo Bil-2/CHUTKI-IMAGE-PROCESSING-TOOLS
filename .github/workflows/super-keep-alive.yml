@@ -1,0 +1,46 @@
+name: Super Keep-Alive - Backup Layer
+
+on:
+  schedule:
+    # Run every 3 minutes as backup layer
+    - cron: "*/3 * * * *"
+  workflow_dispatch:
+
+jobs:
+  super-ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Ultra-Fast Keep-Alive
+        run: |
+          echo "⚡ Super Keep-Alive Layer"
+          echo "⏰ $(date -u)"
+
+          BACKEND_URL="https://chutki-image-processing-tools.onrender.com"
+
+          # Quick health check
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: GitHub-SuperKeepAlive" \
+            --max-time 12 \
+            "${BACKEND_URL}/api/health")
+
+          if [ "$response" = "200" ]; then
+            echo "✅ Server alive (HTTP $response)"
+            exit 0
+          else
+            echo "⚠️ Response: HTTP $response"
+            # Try one more time
+            sleep 3
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 12 \
+              "${BACKEND_URL}/api/health")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Server alive on retry (HTTP $response)"
+              exit 0
+            else
+              echo "❌ Server not responding"
+              exit 1
+            fi
+          fi
