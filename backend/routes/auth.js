@@ -77,6 +77,23 @@ router.get('/verify-token', async (req, res) => {
   }
 });
 
+// Status check endpoint for keep-alive monitoring (no auth required)
+router.get('/status', (req, res) => {
+  const hasGoogleOAuth = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const databaseConnected = global.DATABASE_CONNECTED || false;
+
+  res.status(200).json({
+    status: 'OK',
+    service: 'auth',
+    timestamp: new Date().toISOString(),
+    features: {
+      googleOAuth: hasGoogleOAuth,
+      database: databaseConnected
+    },
+    message: 'Authentication service is healthy'
+  });
+});
+
 router.get('/verify', requireDatabase, verifyToken);
 
 // Protected routes
@@ -99,13 +116,13 @@ if (hasGoogleCredentials && databaseConnected) {
       console.log('[OAUTH] Callback received');
       console.log('[OAUTH] Database connected:', global.DATABASE_CONNECTED);
       console.log('[OAUTH] User object:', req.user ? 'Present' : 'Missing');
-      
+
       // Check database connection
       if (!global.DATABASE_CONNECTED) {
         console.error('[OAUTH] Database not connected');
         return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=database_unavailable`);
       }
-      
+
       if (!req.user) {
         console.error('[OAUTH] No user object in request');
         return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
@@ -126,11 +143,11 @@ if (hasGoogleCredentials && databaseConnected) {
       );
 
       console.log('[OAUTH] Token generated successfully');
-      
+
       // Redirect to success page with token
       const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`;
       console.log('[OAUTH] Redirecting to:', redirectUrl);
-      
+
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('[OAUTH] Callback error:', error);

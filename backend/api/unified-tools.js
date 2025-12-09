@@ -90,7 +90,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
     // Extract file buffer - support both req.files (array) and req.file (single)
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
-    
+
     if (!fileBuffer) {
       console.log('[ERROR] No file provided');
       return res.status(400).json({ error: 'No image file provided' });
@@ -104,175 +104,175 @@ router.post('/:tool', uploadAny, async (req, res) => {
     const customFilename = req.body.customFilename;
 
     switch (tool) {
-        case 'passport-photo': {
-          const { size = '2x2', dpi = 300, background = '#FFFFFF', quantity = 1, paperSize = '4x6', enhance = true, country = 'US', complianceCheck = true, headPositionCheck = true, lightingCheck = true, backgroundCheck = true } = req.body;
-          
-          // Parse size dimensions
-          let width, height;
-          if (size.includes('x')) {
-            [width, height] = size.split('x').map(s => parseFloat(s));
+      case 'passport-photo': {
+        const { size = '2x2', dpi = 300, background = '#FFFFFF', quantity = 1, paperSize = '4x6', enhance = true, country = 'US', complianceCheck = true, headPositionCheck = true, lightingCheck = true, backgroundCheck = true } = req.body;
+
+        // Parse size dimensions
+        let width, height;
+        if (size.includes('x')) {
+          [width, height] = size.split('x').map(s => parseFloat(s));
+        } else {
+          width = height = parseFloat(size);
+        }
+
+        // Convert to pixels based on DPI
+        let pixelWidth = Math.round(width * parseInt(dpi) / 2.54);
+        let pixelHeight = Math.round(height * parseInt(dpi) / 2.54);
+        let backgroundValue = background;
+
+        // Country-specific requirements
+        const countryRequirements = {
+          'US': { width: 2, height: 2, dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 1, headSizeMax: 1.375 },
+          'UK': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 29, headSizeMax: 34 },
+          'Canada': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
+          'Australia': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 32, headSizeMax: 35 },
+          'India': { width: 35, height: 35, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 29, headSizeMax: 34 },
+          'Germany': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
+          'France': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
+          'China': { width: 33, height: 48, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 32, headSizeMax: 36 }
+        };
+
+        // Apply country-specific settings if available
+        if (countryRequirements[country]) {
+          const reqs = countryRequirements[country];
+          if (reqs.unit === 'mm') {
+            pixelWidth = Math.round(reqs.width * parseInt(dpi) / 25.4);
+            pixelHeight = Math.round(reqs.height * parseInt(dpi) / 25.4);
           } else {
-            width = height = parseFloat(size);
+            pixelWidth = Math.round(reqs.width * parseInt(dpi) / 2.54);
+            pixelHeight = Math.round(reqs.height * parseInt(dpi) / 2.54);
           }
-          
-          // Convert to pixels based on DPI
-          let pixelWidth = Math.round(width * parseInt(dpi) / 2.54);
-          let pixelHeight = Math.round(height * parseInt(dpi) / 2.54);
-          let backgroundValue = background;
-          
-          // Country-specific requirements
-          const countryRequirements = {
-            'US': { width: 2, height: 2, dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 1, headSizeMax: 1.375 },
-            'UK': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 29, headSizeMax: 34 },
-            'Canada': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
-            'Australia': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 32, headSizeMax: 35 },
-            'India': { width: 35, height: 35, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 29, headSizeMax: 34 },
-            'Germany': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
-            'France': { width: 35, height: 45, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 31, headSizeMax: 36 },
-            'China': { width: 33, height: 48, unit: 'mm', dpi: 300, backgroundColor: '#FFFFFF', headSizeMin: 32, headSizeMax: 36 }
-          };
-          
-          // Apply country-specific settings if available
-          if (countryRequirements[country]) {
-            const reqs = countryRequirements[country];
-            if (reqs.unit === 'mm') {
-              pixelWidth = Math.round(reqs.width * parseInt(dpi) / 25.4);
-              pixelHeight = Math.round(reqs.height * parseInt(dpi) / 25.4);
-            } else {
-              pixelWidth = Math.round(reqs.width * parseInt(dpi) / 2.54);
-              pixelHeight = Math.round(reqs.height * parseInt(dpi) / 2.54);
-            }
-            backgroundValue = reqs.backgroundColor;
-          }
-          
-          let processor = sharp(fileBuffer);
-          
-          // Apply enhancement if requested
-          if (enhance === 'true' || enhance === true) {
-            processor = processor
-              .sharpen({ sigma: 1, m1: 1, m2: 2 })
-              .modulate({ brightness: 1.05, contrast: 1.1 });
-          }
-          
-          // Advanced face detection and cropping
-          let faceProcessor;
+          backgroundValue = reqs.backgroundColor;
+        }
+
+        let processor = sharp(fileBuffer);
+
+        // Apply enhancement if requested
+        if (enhance === 'true' || enhance === true) {
+          processor = processor
+            .sharpen({ sigma: 1, m1: 1, m2: 2 })
+            .modulate({ brightness: 1.05, contrast: 1.1 });
+        }
+
+        // Advanced face detection and cropping
+        let faceProcessor;
+        try {
+          // Try to use more advanced face detection
+          faceProcessor = await detectAndCropFace(fileBuffer);
+        } catch (faceError) {
+          // Fallback to basic processing
+          console.log('Advanced face detection failed, using basic processing');
+          faceProcessor = sharp(fileBuffer);
+        }
+
+        // Resize to passport photo dimensions
+        processedBuffer = await faceProcessor
+          .resize(pixelWidth, pixelHeight, { fit: 'cover', position: 'center' })
+          .flatten({ background: backgroundValue })
+          .jpeg({ quality: 95, mozjpeg: true })
+          .toBuffer();
+
+        // Advanced compliance check
+        let complianceStatus = {
+          passed: true,
+          issues: [],
+          suggestions: [],
+          details: {}
+        };
+
+        if (complianceCheck) {
           try {
-            // Try to use more advanced face detection
-            faceProcessor = await detectAndCropFace(fileBuffer);
-          } catch (faceError) {
-            // Fallback to basic processing
-            console.log('Advanced face detection failed, using basic processing');
-            faceProcessor = sharp(fileBuffer);
-          }
-          
-          // Resize to passport photo dimensions
-          processedBuffer = await faceProcessor
-            .resize(pixelWidth, pixelHeight, { fit: 'cover', position: 'center' })
-            .flatten({ background: backgroundValue })
-            .jpeg({ quality: 95, mozjpeg: true })
-            .toBuffer();
-          
-          // Advanced compliance check
-          let complianceStatus = {
-            passed: true,
-            issues: [],
-            suggestions: [],
-            details: {}
-          };
-          
-          if (complianceCheck) {
-            try {
-              const metadata = await sharp(fileBuffer).metadata();
-              
-              // Resolution check
-              if (metadata.width < 600 || metadata.height < 600) {
-                complianceStatus.passed = false;
-                complianceStatus.issues.push('Image resolution too low (minimum 600x600 pixels recommended)');
-                complianceStatus.suggestions.push('Use a higher resolution image for better quality');
+            const metadata = await sharp(fileBuffer).metadata();
+
+            // Resolution check
+            if (metadata.width < 600 || metadata.height < 600) {
+              complianceStatus.passed = false;
+              complianceStatus.issues.push('Image resolution too low (minimum 600x600 pixels recommended)');
+              complianceStatus.suggestions.push('Use a higher resolution image for better quality');
+            }
+
+            // Head position check (simulated)
+            if (headPositionCheck) {
+              complianceStatus.details.headPosition = 'Centered';
+              // In a real implementation, this would use facial landmark detection
+              // For now, we'll assume it's correct since we're using face detection
+            }
+
+            // Lighting check (simulated)
+            if (lightingCheck) {
+              complianceStatus.details.lighting = 'Good';
+              // In a real implementation, this would analyze brightness/contrast distribution
+              // For now, we'll assume it's good since we're enhancing the image
+            }
+
+            // Background check
+            if (backgroundCheck) {
+              complianceStatus.details.background = backgroundValue === '#FFFFFF' ? 'Solid white' : 'Custom color';
+              if (backgroundValue !== '#FFFFFF') {
+                complianceStatus.issues.push('Non-standard background color may not be accepted');
+                complianceStatus.suggestions.push('Consider using pure white background (#FFFFFF) for official documents');
               }
-              
-              // Head position check (simulated)
-              if (headPositionCheck) {
-                complianceStatus.details.headPosition = 'Centered';
-                // In a real implementation, this would use facial landmark detection
-                // For now, we'll assume it's correct since we're using face detection
-              }
-              
-              // Lighting check (simulated)
-              if (lightingCheck) {
-                complianceStatus.details.lighting = 'Good';
-                // In a real implementation, this would analyze brightness/contrast distribution
-                // For now, we'll assume it's good since we're enhancing the image
-              }
-              
-              // Background check
-              if (backgroundCheck) {
-                complianceStatus.details.background = backgroundValue === '#FFFFFF' ? 'Solid white' : 'Custom color';
-                if (backgroundValue !== '#FFFFFF') {
-                  complianceStatus.issues.push('Non-standard background color may not be accepted');
-                  complianceStatus.suggestions.push('Consider using pure white background (#FFFFFF) for official documents');
+            }
+
+            // Country-specific compliance checks
+            if (countryRequirements[country]) {
+              const reqs = countryRequirements[country];
+              complianceStatus.details.country = country;
+              complianceStatus.details.dimensions = `${reqs.width}x${reqs.height} ${reqs.unit || 'inches'}`;
+
+              // Add more specific checks based on country requirements
+              if (country === 'US') {
+                // US passport requirements
+                if (metadata.width < 600 || metadata.height < 600) {
+                  complianceStatus.suggestions.push('US passport photos require high resolution for best results');
                 }
               }
-              
-              // Country-specific compliance checks
-              if (countryRequirements[country]) {
-                const reqs = countryRequirements[country];
-                complianceStatus.details.country = country;
-                complianceStatus.details.dimensions = `${reqs.width}x${reqs.height} ${reqs.unit || 'inches'}`;
-                
-                // Add more specific checks based on country requirements
-                if (country === 'US') {
-                  // US passport requirements
-                  if (metadata.width < 600 || metadata.height < 600) {
-                    complianceStatus.suggestions.push('US passport photos require high resolution for best results');
-                  }
-                }
-              }
-            } catch (complianceError) {
-              console.log('Compliance check error:', complianceError);
-              complianceStatus.issues.push('Could not complete all compliance checks');
             }
+          } catch (complianceError) {
+            console.log('Compliance check error:', complianceError);
+            complianceStatus.issues.push('Could not complete all compliance checks');
           }
-          
-          // If quantity > 1, create a grid layout
-          if (parseInt(quantity) > 1) {
-            const photosPerRow = Math.ceil(Math.sqrt(parseInt(quantity)));
-            const photosPerCol = Math.ceil(parseInt(quantity) / photosPerRow);
-            
-            // Create a canvas for the grid
-            const canvasWidth = pixelWidth * photosPerRow;
-            const canvasHeight = pixelHeight * photosPerCol;
-            
-            const compositeArray = [];
-            for (let i = 0; i < parseInt(quantity); i++) {
-              const row = Math.floor(i / photosPerRow);
-              const col = i % photosPerRow;
-              compositeArray.push({
-                input: processedBuffer,
-                top: row * pixelHeight,
-                left: col * pixelWidth
-              });
+        }
+
+        // If quantity > 1, create a grid layout
+        if (parseInt(quantity) > 1) {
+          const photosPerRow = Math.ceil(Math.sqrt(parseInt(quantity)));
+          const photosPerCol = Math.ceil(parseInt(quantity) / photosPerRow);
+
+          // Create a canvas for the grid
+          const canvasWidth = pixelWidth * photosPerRow;
+          const canvasHeight = pixelHeight * photosPerCol;
+
+          const compositeArray = [];
+          for (let i = 0; i < parseInt(quantity); i++) {
+            const row = Math.floor(i / photosPerRow);
+            const col = i % photosPerRow;
+            compositeArray.push({
+              input: processedBuffer,
+              top: row * pixelHeight,
+              left: col * pixelWidth
+            });
+          }
+
+          processedBuffer = await sharp({
+            create: {
+              width: canvasWidth,
+              height: canvasHeight,
+              channels: 3,
+              background: { r: 255, g: 255, b: 255 }
             }
-            
-            processedBuffer = await sharp({
-              create: {
-                width: canvasWidth,
-                height: canvasHeight,
-                channels: 3,
-                background: { r: 255, g: 255, b: 255 }
-              }
-            })
+          })
             .composite(compositeArray)
             .jpeg({ quality: 95, mozjpeg: true })
             .toBuffer();
-          }
-          
-          filename = customFilename ? `${customFilename}.jpg` : `passport_photo_${country}_${Date.now()}.jpg`;
-          
-          // Add compliance info to response headers
-          res.setHeader('X-Compliance-Status', JSON.stringify(complianceStatus));
-          break;
         }
+
+        filename = customFilename ? `${customFilename}.jpg` : `passport_photo_${country}_${Date.now()}.jpg`;
+
+        // Add compliance info to response headers
+        res.setHeader('X-Compliance-Status', JSON.stringify(complianceStatus));
+        break;
+      }
 
       case 'reduce-size-kb': {
         try {
@@ -286,14 +286,14 @@ router.post('/:tool', uploadAny, async (req, res) => {
           console.log(`Processing reduce-size-kb: target=${targetKB}KB (${targetBytes} bytes), quality=${quality}, format=${format}`);
 
           let processor = sharp(fileBuffer);
-          
+
           // Preserve or remove metadata based on setting
           if (!preserveMetadata) {
             processor = processor.withMetadata({ exif: null, iptc: null, xmp: null, tifftagPhotoshop: null });
           }
-          
+
           // Apply format-specific processing
-          switch(format.toLowerCase()) {
+          switch (format.toLowerCase()) {
             case 'png':
               // For PNG, we need to first convert to JPEG to compress, then back to PNG if needed
               if (compressionMethod === 'lossy') {
@@ -301,9 +301,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
                 const jpegBuffer = await sharp(fileBuffer)
                   .jpeg({ quality: quality, mozjpeg: true })
                   .toBuffer();
-                
+
                 processedBuffer = await compressToSize(jpegBuffer, targetBytes);
-                
+
                 // Convert back to PNG
                 processedBuffer = await sharp(processedBuffer)
                   .png({ quality: Math.min(100, Math.max(1, quality)), compressionLevel: 6 })
@@ -314,7 +314,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
                 processedBuffer = await sharp(fileBuffer)
                   .png({ quality: Math.min(100, Math.max(1, quality)), compressionLevel: 6 })
                   .toBuffer();
-                
+
                 // If still too large, apply additional compression
                 if (processedBuffer.length > targetBytes) {
                   processedBuffer = await compressToSize(processedBuffer, targetBytes);
@@ -345,7 +345,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const compressedSize = processedBuffer.length;
           const savings = originalSize - compressedSize;
           const savingsPercentage = ((savings / originalSize) * 100).toFixed(1);
-          
+
           res.setHeader('X-Compression-Info', JSON.stringify({
             originalSize,
             compressedSize,
@@ -384,7 +384,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
       case 'resize-pixel': {
         const { width, height, maintain = true, quality = 90, format = 'jpeg', resizeMethod = 'lanczos3', upscaling = false, smartCrop = false } = req.body;
-        
+
         // Convert resize method to sharp kernel
         const kernelMap = {
           'nearest': 'nearest',
@@ -392,39 +392,39 @@ router.post('/:tool', uploadAny, async (req, res) => {
           'mitchell': 'mitchell',
           'lanczos3': 'lanczos3'
         };
-        
+
         const kernel = kernelMap[resizeMethod] || 'lanczos3';
-        
+
         // Get original metadata
         const metadata = await sharp(fileBuffer).metadata();
         const originalWidth = metadata.width;
         const originalHeight = metadata.height;
-        
+
         // Calculate target dimensions
         let targetWidth = parseInt(width);
         let targetHeight = parseInt(height);
-        
+
         // If maintaining aspect ratio
         if (maintain === 'true' || maintain === true) {
           const aspectRatio = originalWidth / originalHeight;
-          
+
           // If both dimensions are provided, adjust to maintain aspect ratio
           if (targetWidth && targetHeight) {
             if (smartCrop === 'true' || smartCrop === true) {
               // Smart crop to fit exact dimensions
               const targetRatio = targetWidth / targetHeight;
-              
+
               if (aspectRatio > targetRatio) {
                 // Original is wider, crop width
                 const newWidth = Math.round(originalHeight * targetRatio);
                 const left = Math.floor((originalWidth - newWidth) / 2);
-                
+
                 let processor = sharp(fileBuffer)
                   .extract({ left, top: 0, width: newWidth, height: originalHeight })
                   .resize(targetWidth, targetHeight, { kernel });
-                  
+
                 // Apply format-specific processing
-                switch(format.toLowerCase()) {
+                switch (format.toLowerCase()) {
                   case 'png':
                     processedBuffer = await processor
                       .png({ quality: parseInt(quality), compressionLevel: 6 })
@@ -450,13 +450,13 @@ router.post('/:tool', uploadAny, async (req, res) => {
                 // Original is taller, crop height
                 const newHeight = Math.round(originalWidth / targetRatio);
                 const top = Math.floor((originalHeight - newHeight) / 2);
-                
+
                 let processor = sharp(fileBuffer)
                   .extract({ left: 0, top, width: originalWidth, height: newHeight })
                   .resize(targetWidth, targetHeight, { kernel });
-                  
+
                 // Apply format-specific processing
-                switch(format.toLowerCase()) {
+                switch (format.toLowerCase()) {
                   case 'png':
                     processedBuffer = await processor
                       .png({ quality: parseInt(quality), compressionLevel: 6 })
@@ -483,9 +483,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
               // Standard fit inside
               let processor = sharp(fileBuffer)
                 .resize(targetWidth, targetHeight, { fit: 'inside', kernel });
-                
+
               // Apply format-specific processing
-              switch(format.toLowerCase()) {
+              switch (format.toLowerCase()) {
                 case 'png':
                   processedBuffer = await processor
                     .png({ quality: parseInt(quality), compressionLevel: 6 })
@@ -515,12 +515,12 @@ router.post('/:tool', uploadAny, async (req, res) => {
             } else if (targetHeight && !targetWidth) {
               targetWidth = Math.round(targetHeight * aspectRatio);
             }
-            
+
             let processor = sharp(fileBuffer)
               .resize(targetWidth, targetHeight, { kernel });
-              
+
             // Apply format-specific processing
-            switch(format.toLowerCase()) {
+            switch (format.toLowerCase()) {
               case 'png':
                 processedBuffer = await processor
                   .png({ quality: parseInt(quality), compressionLevel: 6 })
@@ -547,9 +547,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
           // Not maintaining aspect ratio - stretch to fit
           let processor = sharp(fileBuffer)
             .resize(targetWidth, targetHeight, { fit: 'fill', kernel });
-            
+
           // Apply format-specific processing
-          switch(format.toLowerCase()) {
+          switch (format.toLowerCase()) {
             case 'png':
               processedBuffer = await processor
                 .png({ quality: parseInt(quality), compressionLevel: 6 })
@@ -572,11 +572,11 @@ router.post('/:tool', uploadAny, async (req, res) => {
               filename = customFilename ? `${customFilename}.jpg` : `resized_${targetWidth}x${targetHeight}_${Date.now()}.jpg`;
           }
         }
-        
+
         // Add resize info to response headers
         const originalSize = fileBuffer.length;
         const resizedSize = processedBuffer.length;
-        
+
         res.setHeader('X-Resize-Info', JSON.stringify({
           originalWidth,
           originalHeight,
@@ -595,9 +595,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
       case 'rotate': {
         const { angle = 90, background = 'white', expandCanvas = true, quality = 90 } = req.body;
-        
+
         let processor = sharp(fileBuffer);
-        
+
         // If expandCanvas is false, crop to original dimensions after rotation
         if (expandCanvas === 'false' || expandCanvas === false) {
           const metadata = await sharp(fileBuffer).metadata();
@@ -607,7 +607,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
         } else {
           processor = processor.rotate(parseFloat(angle), { background });
         }
-        
+
         processedBuffer = await processor
           .jpeg({ quality: parseInt(quality), mozjpeg: true })
           .toBuffer();
@@ -741,8 +741,8 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
         // Create text SVG with advanced styling
         let xPosition, yPosition, textAnchor;
-        
-        switch(position) {
+
+        switch (position) {
           case 'top-left':
             xPosition = 20;
             yPosition = 50;
@@ -803,11 +803,11 @@ router.post('/:tool', uploadAny, async (req, res) => {
       case 'compress-40kb': case 'compress-50kb': case 'compress-100kb':
       case 'compress-150kb': case 'compress-200kb': case 'compress-300kb':
       case 'compress-500kb': case 'compress-1mb': case 'compress-2mb':
-      case 'compress-20-50kb': case 'image-compressor': 
+      case 'compress-20-50kb': case 'image-compressor':
       case 'jpg-to-kb': case 'kb-to-mb': case 'mb-to-kb': {
         const sizeMatch = tool.match(/compress-(\d+)(kb|mb)/) || tool.match(/(\d+)(kb|mb)/);
         let targetBytes;
-        
+
         if (tool === 'compress-20-50kb') {
           targetBytes = 35 * 1024; // Middle value
         } else if (tool === 'image-compressor') {
@@ -815,16 +815,16 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const quality = parseInt(req.body.quality) || 80;
           const format = req.body.format || 'jpeg';
           const preserveMetadata = req.body.preserveMetadata === 'true' || req.body.preserveMetadata === true;
-          
+
           let processor = sharp(fileBuffer);
-          
+
           // Preserve or remove metadata based on setting
           if (!preserveMetadata) {
             processor = processor.withMetadata({ exif: null, iptc: null, xmp: null, tifftagPhotoshop: null });
           }
-          
+
           // Apply format-specific processing
-          switch(format.toLowerCase()) {
+          switch (format.toLowerCase()) {
             case 'png':
               processedBuffer = await processor
                 .png({ quality, compressionLevel: 6 })
@@ -846,7 +846,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
                 .toBuffer();
               filename = customFilename ? `${customFilename}.jpg` : `compressed_q${quality}_${Date.now()}.jpg`;
           }
-          
+
           break;
         } else if (tool === 'jpg-to-kb') {
           targetBytes = (parseInt(req.body.targetKB) || 100) * 1024;
@@ -938,16 +938,16 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
       case 'generate-signature': {
         const { enhance = true, background = 'transparent', style = 'natural', quality = 95, format = 'png', signatureText = '', generateType = 'enhance' } = req.body;
-        
+
         // If generating from text rather than enhancing existing signature
         if (generateType === 'generate' && signatureText) {
           // For now, we'll create a simple text-based signature
           // In a more advanced implementation, this would use AI to generate handwriting
-          
+
           // Create a transparent background canvas
           const canvasWidth = 800;
           const canvasHeight = 200;
-          
+
           // Create SVG signature
           const signatureSvg = Buffer.from(
             `<svg width="${canvasWidth}" height="${canvasHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -962,26 +962,26 @@ router.post('/:tool', uploadAny, async (req, res) => {
               <text x="50" y="130" class="signature">${signatureText}</text>
             </svg>`
           );
-          
+
           // Convert SVG to PNG
           processedBuffer = await sharp(signatureSvg)
             .png()
             .toBuffer();
-          
+
           contentType = 'image/png';
           filename = customFilename ? `${customFilename}.png` : `generated_signature_${Date.now()}.png`;
         } else {
           // Enhance existing signature
           const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
-          
+
           if (!fileBuffer) {
             return res.status(400).json({ error: 'No image file provided' });
           }
-          
+
           let processor = sharp(fileBuffer);
 
           // Apply different enhancement styles
-          switch(style) {
+          switch (style) {
             case 'sharp':
               processor = processor
                 .sharpen({ sigma: 3, m1: 2, m2: 4 })
@@ -1001,7 +1001,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
           }
 
           // Apply format-specific processing
-          switch(format.toLowerCase()) {
+          switch (format.toLowerCase()) {
             case 'svg':
               // For SVG, we'll convert to a simplified vector format
               // This is a simplified implementation
@@ -1047,7 +1047,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
               break;
           }
         }
-        
+
         // Add signature info to response headers
         res.setHeader('X-Signature-Info', JSON.stringify({
           generateType,
@@ -1056,7 +1056,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
           format,
           background
         }));
-        
+
         break;
       }
 
@@ -1066,7 +1066,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const targetBytes = targetKB * 1024;
           const metadata = await sharp(fileBuffer).metadata();
           const currentSize = fileBuffer.length;
-          
+
           if (currentSize >= targetBytes) {
             // Already larger than target
             processedBuffer = await sharp(fileBuffer).jpeg({ quality: 95 }).toBuffer();
@@ -1076,12 +1076,12 @@ router.post('/:tool', uploadAny, async (req, res) => {
             const scaleFactor = Math.sqrt(targetBytes / currentSize);
             const newWidth = Math.round(metadata.width * Math.min(scaleFactor, 2));
             const newHeight = Math.round(metadata.height * Math.min(scaleFactor, 2));
-            
+
             processedBuffer = await sharp(fileBuffer)
               .resize(newWidth, newHeight, { kernel: 'lanczos3' })
               .jpeg({ quality: 100, chromaSubsampling: '4:4:4', mozjpeg: false })
               .toBuffer();
-            
+
             filename = customFilename ? `${customFilename}.jpg` : `increased_${targetKB}kb_${Date.now()}.jpg`;
           }
         } catch (error) {
@@ -1108,7 +1108,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
         const pixelWidth = Math.round(6 * dpi / 2.54); // 6cm to pixels
         const pixelHeight = Math.round(2 * dpi / 2.54); // 2cm to pixels
         const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
-        
+
         if (!fileBuffer) {
           return res.status(400).json({ error: 'No image file provided' });
         }
@@ -1269,7 +1269,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
         const { rows = 3, cols = 3 } = req.body;
         const numRows = parseInt(rows);
         const numCols = parseInt(cols);
-        
+
         // Resize to Instagram size and prepare for grid
         processedBuffer = await sharp(fileBuffer)
           .resize(1080 * numCols, 1080 * numRows, { fit: 'cover' })
@@ -1283,7 +1283,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
       case 'join-images': {
         const { direction = 'horizontal', spacing = 0 } = req.body;
         const images = req.files || [];
-        
+
         if (images.length < 2) {
           // Single image - just return it
           processedBuffer = await sharp(fileBuffer)
@@ -1294,14 +1294,14 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const metadatas = await Promise.all(
             images.map(img => sharp(img.buffer).metadata())
           );
-          
+
           if (direction === 'horizontal') {
             const totalWidth = metadatas.reduce((sum, m) => sum + m.width, 0) + (spacing * (images.length - 1));
             const maxHeight = Math.max(...metadatas.map(m => m.height));
-            
+
             const composites = [];
             let leftOffset = 0;
-            
+
             for (let i = 0; i < images.length; i++) {
               composites.push({
                 input: await sharp(images[i].buffer).resize({ height: maxHeight, fit: 'inside' }).toBuffer(),
@@ -1310,7 +1310,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
               });
               leftOffset += metadatas[i].width + spacing;
             }
-            
+
             processedBuffer = await sharp({
               create: { width: totalWidth, height: maxHeight, channels: 3, background: { r: 255, g: 255, b: 255 } }
             })
@@ -1321,10 +1321,10 @@ router.post('/:tool', uploadAny, async (req, res) => {
             // Vertical
             const maxWidth = Math.max(...metadatas.map(m => m.width));
             const totalHeight = metadatas.reduce((sum, m) => sum + m.height, 0) + (spacing * (images.length - 1));
-            
+
             const composites = [];
             let topOffset = 0;
-            
+
             for (let i = 0; i < images.length; i++) {
               composites.push({
                 input: await sharp(images[i].buffer).resize({ width: maxWidth, fit: 'inside' }).toBuffer(),
@@ -1333,7 +1333,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
               });
               topOffset += metadatas[i].height + spacing;
             }
-            
+
             processedBuffer = await sharp({
               create: { width: maxWidth, height: totalHeight, channels: 3, background: { r: 255, g: 255, b: 255 } }
             })
@@ -1376,9 +1376,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const direction = req.body.direction || 'horizontal';
           const rows = Math.max(1, parseInt(req.body.rows) || 2);
           const cols = Math.max(1, parseInt(req.body.cols) || 2);
-          
+
           let pieceWidth, pieceHeight;
-          
+
           if (direction === 'horizontal') {
             pieceWidth = Math.max(1, Math.floor(metadata.width / parts));
             pieceHeight = metadata.height;
@@ -1660,13 +1660,13 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const y = parseInt(req.body.y) || 0;
           const width = parseInt(req.body.width) || Math.min(200, metadata.width);
           const height = parseInt(req.body.height) || Math.min(200, metadata.height);
-          
+
           // Ensure crop dimensions are within image bounds
           const safeLeft = Math.max(0, Math.min(x, metadata.width - 1));
           const safeTop = Math.max(0, Math.min(y, metadata.height - 1));
           const safeWidth = Math.min(width, metadata.width - safeLeft);
           const safeHeight = Math.min(height, metadata.height - safeTop);
-          
+
           processedBuffer = await sharp(fileBuffer)
             .extract({
               left: safeLeft,
@@ -1768,7 +1768,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
           // Perform OCR using Tesseract
           const { data: { text } } = await Tesseract.recognize(fileBuffer, lang, {
-            logger: () => {} // Silent logger
+            logger: () => { } // Silent logger
           });
 
           console.log('OCR completed successfully');
@@ -1780,9 +1780,9 @@ router.post('/:tool', uploadAny, async (req, res) => {
 
         } catch (error) {
           console.error('OCR Error:', error);
-          return res.status(500).json({ 
+          return res.status(500).json({
             success: false,
-            error: 'Failed to extract text from image: ' + error.message 
+            error: 'Failed to extract text from image: ' + error.message
           });
         }
       }
@@ -1809,23 +1809,23 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const match = tool.match(/(\d+)kb/);
           const targetKB = match ? parseInt(match[1]) : 100;
           const targetBytes = targetKB * 800;
-          
+
           const compressedImage = await compressToSize(fileBuffer, targetBytes);
           const metadata = await sharp(compressedImage).metadata();
-          
+
           const pdfBuffer = await new Promise((resolve, reject) => {
             const pdfDoc = new PDFDocument({ autoFirstPage: false });
             const chunks = [];
-            
+
             pdfDoc.on('data', chunk => chunks.push(chunk));
             pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
             pdfDoc.on('error', reject);
-            
+
             pdfDoc.addPage({ size: [metadata.width + 40, metadata.height + 40], margin: 20 });
             pdfDoc.image(compressedImage, 20, 20, { width: metadata.width, height: metadata.height });
             pdfDoc.end();
           });
-          
+
           res.set({
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="image_${targetKB}kb_${Date.now()}.pdf"`
@@ -1933,13 +1933,13 @@ router.post('/:tool', uploadAny, async (req, res) => {
           const fontSize = parseInt(req.body.fontSize) || 48;
           const color = req.body.color || 'white';
           const position = req.body.position || 'bottom-right';
-          
+
           const metadata = await sharp(fileBuffer).metadata();
-          
+
           // Create SVG text overlay
           let x = 20, y = metadata.height - 20;
           let textAnchor = 'start';
-          
+
           if (position === 'top-left') {
             x = 20; y = fontSize + 20;
           } else if (position === 'top-right') {
@@ -1949,7 +1949,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
             x = metadata.width / 2; y = metadata.height / 2;
             textAnchor = 'middle';
           }
-          
+
           const svgText = `
             <svg width="${metadata.width}" height="${metadata.height}">
               <text x="${x}" y="${y}" font-size="${fontSize}" fill="${color}" 
@@ -1959,7 +1959,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
               </text>
             </svg>
           `;
-          
+
           processedBuffer = await sharp(fileBuffer)
             .composite([{
               input: Buffer.from(svgText),
@@ -1968,7 +1968,7 @@ router.post('/:tool', uploadAny, async (req, res) => {
             }])
             .jpeg({ quality: 95 })
             .toBuffer();
-          
+
           filename = customFilename ? `${customFilename}.jpg` : `text_added_${Date.now()}.jpg`;
         } catch (error) {
           return res.status(500).json({ error: 'Add text failed: ' + error.message });
@@ -2012,6 +2012,17 @@ router.post('/:tool', uploadAny, async (req, res) => {
     });
   }
 });
+
+// Health check endpoint for keep-alive monitoring
+router.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    service: 'tools',
+    timestamp: new Date().toISOString(),
+    message: 'Tools service is healthy'
+  });
+});
+
 // Add a simple test endpoint
 router.get('/test', (req, res) => {
   res.json({
