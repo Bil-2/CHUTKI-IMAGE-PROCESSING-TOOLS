@@ -9,8 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "warmup": "node warm-up.js",
-    "monitor": "node monitor-uptime.js",
-    "deploy": "vercel --prod"
+    "monitor": "node monitor-uptime.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

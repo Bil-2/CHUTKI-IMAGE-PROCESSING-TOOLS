@@ -1,12 +1,12 @@
 // Configuration for CHUTKI Image Tools
 const config = {
   // Backend API URL - Use environment variable or fallback to localhost
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ||
     (import.meta.env.PROD ? 'https://chutki-image-processing-tools.onrender.com' : 'http://localhost:5001'),
 
   // Frontend URL - Use localhost for development, production URL for production
-  FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL || 
-    (import.meta.env.PROD ? 'https://your-frontend-url.vercel.app' : 'http://localhost:5173'),
+  FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL ||
+    (import.meta.env.PROD ? 'https://your-frontend-url.netlify.app' : 'http://localhost:5173'),
 
   // API endpoints
   ENDPOINTS: {

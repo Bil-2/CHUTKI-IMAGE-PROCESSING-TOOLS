@@ -1,6 +1,6 @@
 # CHUTKI Application Deployment Guide
 
-This guide provides detailed steps for deploying your CHUTKI application to production with MongoDB Atlas, Render (backend), and Vercel (frontend).
+This guide provides detailed steps for deploying your CHUTKI application to production with MongoDB Atlas, Render (backend), and Netlify (frontend).
 
 ## Prerequisites
 
@@ -8,13 +8,13 @@ Before starting, ensure you have:
 - A GitHub account with your CHUTKI repository pushed
 - A MongoDB Atlas account (see MONGODB_SETUP.md)
 - A Render account
-- A Vercel account
+- A Netlify account
 
 ## Deployment Order
 
 1. MongoDB Atlas (Database) - 10 minutes
 2. Render (Backend) - 15 minutes
-3. Vercel (Frontend) - 10 minutes
+3. Netlify (Frontend) - 10 minutes
 4. Update Cross-References - 5 minutes
 
 ---
@@ -54,7 +54,7 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
    MONGODB_URI=your-mongodb-connection-string
    JWT_SECRET=your-secure-jwt-secret
    SESSION_SECRET=your-secure-session-secret
-   CLIENT_URL=https://your-frontend.vercel.app
+   CLIENT_URL=https://your-frontend.netlify.app
    ```
 6. Click "Create Web Service"
 7. Wait for deployment to complete (typically 5-10 minutes)
@@ -62,25 +62,24 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
 
 ---
 
-## 3. Vercel Deployment (Frontend)
+## 3. Netlify Deployment (Frontend)
 
-1. Go to [Vercel](https://vercel.com) and sign in
-2. Click "New Project"
-3. Import your GitHub repository
+1. Go to [Netlify](https://netlify.com) and sign in
+2. Click "Add new site" → "Import an existing project"
+3. Connect to your Git provider and select your repository
 4. Configure the following settings:
-   - Project Name: `chutki-frontend`
-   - Framework: `Vite`
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-   - Install Command: `npm install`
+   - Site name: `chutki-frontend` (optional, Netlify will auto-generate if not specified)
+   - Base directory: (leave empty)
+   - Build command: `npm run build`
+   - Publish directory: `dist`
 5. Add the following environment variables:
    ```
    VITE_API_BASE_URL=https://your-backend.onrender.com
-   VITE_FRONTEND_URL=https://your-frontend.vercel.app
+   VITE_FRONTEND_URL=https://your-frontend.netlify.app
    ```
-6. Click "Deploy"
-7. Wait for deployment to complete (typically 3-5 minutes)
-8. Note your frontend URL (e.g., `https://your-project.vercel.app`)
+6. Click "Deploy site"
+7. Wait for deployment to complete (typically 2-4 minutes)
+8. Note your frontend URL (e.g., `https://your-site-name.netlify.app`)
 
 ---
 
@@ -91,7 +90,7 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
 1. Go back to your Render dashboard
 2. Navigate to your `chutki-backend` service
 3. Go to "Environment" tab
-4. Update the `CLIENT_URL` environment variable with your actual Vercel frontend URL
+4. Update the `CLIENT_URL` environment variable with your actual Netlify frontend URL
 5. Click "Save Changes"
 6. Redeploy the service
 
@@ -101,7 +100,7 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
    ```javascript
    API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://your-backend.onrender.com'
    ```
-2. Commit and push to GitHub (this will trigger an automatic redeployment on Vercel)
+2. Commit and push to GitHub (this will trigger an automatic redeployment on Netlify)
 
 ---
 
@@ -115,13 +114,13 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
 | MONGODB_URI | your MongoDB connection string |
 | JWT_SECRET | your secure JWT secret |
 | SESSION_SECRET | your secure session secret |
-| CLIENT_URL | your Vercel frontend URL |
+| CLIENT_URL | your Netlify frontend URL |
 
-### Frontend (Vercel)
+### Frontend (Netlify)
 | Variable | Value |
 |----------|-------|
 | VITE_API_BASE_URL | your Render backend URL |
-| VITE_FRONTEND_URL | your Vercel frontend URL |
+| VITE_FRONTEND_URL | your Netlify frontend URL |
 
 ---
 
@@ -138,15 +137,15 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
 
 ### Common Issues
 
-1. **CORS Errors**: Ensure `CLIENT_URL` in Render matches your Vercel frontend URL
+1. **CORS Errors**: Ensure `CLIENT_URL` in Render matches your Netlify frontend URL
 2. **Database Connection**: Verify your MongoDB connection string and network access
 3. **Environment Variables**: Double-check all environment variables are correctly set
-4. **Build Failures**: Check logs in Render and Vercel dashboards
+4. **Build Failures**: Check logs in Render and Netlify dashboards
 
 ### Checking Logs
 
 - **Render**: Go to your service dashboard and click "Logs"
-- **Vercel**: Go to your project dashboard and click "Logs"
+- **Netlify**: Go to your project dashboard → "Deploys" → Click on a deploy → "Deploy log"
 - **MongoDB Atlas**: Check the "Clusters" section for connection metrics
 
 ---
@@ -166,7 +165,7 @@ mongodb+srv://chutki-user:your-password@chutki-cluster.abc123.mongodb.net/chutki
 ## Maintenance
 
 1. Regularly monitor your MongoDB Atlas usage
-2. Check Render and Vercel for any service alerts
+2. Check Render and Netlify for any service alerts
 3. Update dependencies periodically
 4. Review logs for any errors or performance issues
 

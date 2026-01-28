@@ -1,0 +1,61 @@
+name: Keep Server Alive (Cold Start Prevention)
+
+on:
+  schedule:
+    # Run every 12 minutes to prevent Render free tier cold starts
+    - cron: '*/12 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Backend Health Endpoint
+        run: |
+          echo "🔥 Pinging CHUTKI backend to prevent cold start..."
+          
+          # Ping with retry logic
+          max_retries=3
+          retry_count=0
+          success=false
+          
+          while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+            echo "Attempt $((retry_count + 1))/$max_retries"
+            
+            if curl -f -s -o /dev/null -w "%{http_code}" \
+              -H "User-Agent: GitHub-Actions-KeepAlive" \
+              -H "X-Keep-Alive: true" \
+              --max-time 30 \
+              https://chutki-image-processing-tools.onrender.com/api/health | grep -q "200"; then
+              echo "✅ Server is alive and responding"
+              success=true
+            else
+              echo "⚠️ Ping failed, retrying in 10s..."
+              retry_count=$((retry_count + 1))
+              sleep 10
+            fi
+          done
+          
+          if [ "$success" = false ]; then
+            echo "❌ Failed to reach server after $max_retries attempts"
+            exit 1
+          fi
+
+      - name: Ping Tools Health Endpoint
+        run: |
+          echo "🛠️ Pinging tools endpoint..."
+          
+          if curl -f -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: GitHub-Actions-KeepAlive" \
+            --max-time 20 \
+            https://chutki-image-processing-tools.onrender.com/api/tools/health | grep -q "200"; then
+            echo "✅ Tools endpoint is healthy"
+          else
+            echo "⚠️ Tools endpoint check failed (non-critical)"
+          fi
+
+      - name: Summary
+        run: |
+          echo "📊 Keep-alive check completed at $(date)"
+          echo "🚀 Next check in 12 minutes"

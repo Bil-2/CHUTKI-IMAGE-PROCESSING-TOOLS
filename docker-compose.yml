@@ -7,33 +7,63 @@ services:
     container_name: chutki-mongodb
     restart: unless-stopped
     environment:
+      # Default credentials - CHANGE THESE in production
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password123
       MONGO_INITDB_DATABASE: chutki
     ports:
       - "27017:27017"
     volumes:
+      # Persist MongoDB data
       - mongodb_data:/data/db
     networks:
       - chutki-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-  # CHUTKI Application
+  # CHUTKI Application (Backend + Frontend)
   chutki-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: chutki-app
     restart: unless-stopped
     ports:
+      # Application will be accessible at http://localhost:5001
       - "5001:5001"
     environment:
+      # Application Configuration
       NODE_ENV: production
       PORT: 5001
+      
+      # Database Configuration
+      # Connect to mongodb service using Docker network
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/chutki?authSource=admin
-      JWT_SECRET: your-super-secure-jwt-secret-change-this
-      SESSION_SECRET: your-super-secure-session-secret-change-this
-      CLIENT_URL: http://localhost:5001
+      
+      # Security Secrets - CHANGE THESE in production
+      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret-change-this}
+      SESSION_SECRET: ${SESSION_SECRET:-your-super-secure-session-secret-change-this}
+      
+      # CORS Configuration
+      # Set to your actual domain in production
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:5001}
+      
+      # Optional: Google Auth (uncomment if using)
+      # GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      
+      # Optional: Email Service (uncomment if using)
+      # SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      # FROM_EMAIL: ${FROM_EMAIL}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     volumes:
+      # Persist uploaded files (optional, since app uses memory processing)
       - ./backend/uploads:/app/uploads
     networks:
       - chutki-network
@@ -50,9 +80,12 @@ services:
       retries: 3
       start_period: 40s
 
+# Persistent volumes
 volumes:
   mongodb_data:
+    driver: local
 
+# Network for container communication
 networks:
   chutki-network:
     driver: bridge

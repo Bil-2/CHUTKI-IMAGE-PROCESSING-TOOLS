@@ -9,9 +9,9 @@ Professional image processing web application with 82+ tools for manipulation, c
 
 ## 🌐 **LIVE APPLICATION**
 
-### 🚀 **[Try CHUTKI Now →](https://chutki-image-processing-tools.vercel.app)**
+### 🚀 **[Try CHUTKI Now →](https://chutki-image-processing-tools.netlify.app)**
 
-- **Frontend:** https://chutki-image-processing-tools.vercel.app
+- **Frontend:** https://chutki-image-processing-tools.netlify.app
 - **Backend API:** https://chutki-image-processing-tools.onrender.com
 - **Status:** ✅ LIVE & OPERATIONAL | 82 Tools Active
 
@@ -47,7 +47,7 @@ Professional image processing web application with 82+ tools for manipulation, c
 **Frontend:** React 19, Vite 7, Tailwind CSS, Framer Motion  
 **Backend:** Node.js, Express.js, Sharp.js, MongoDB Atlas  
 **Security:** Helmet.js, CORS, Passport.js, Rate Limiting  
-**Deployment:** Vercel (Frontend), Render (Backend)
+**Deployment:** Netlify (Frontend), Render (Backend)
 
 ## 📦 Quick Start
 
@@ -140,7 +140,7 @@ docker-compose up --build
 
 ### Cloud Deployment
 
-- **Frontend:** Vercel (recommended), Netlify
+- **Frontend:** Netlify (recommended)
 - **Backend:** Render (recommended), Railway, Heroku
 - **Database:** MongoDB Atlas (recommended)
 
@@ -193,7 +193,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
-- **Live App:** [chutki-image-processing-tools.vercel.app](https://chutki-image-processing-tools.vercel.app)
+- **Live App:** [chutki-image-processing-tools.netlify.app](https://chutki-image-processing-tools.netlify.app)
 - **Issues:** [Report Bugs](https://github.com/Bil-2/CHUTKI-IMAGE-TOOL/issues)
 - **Discussions:** [Community](https://github.com/Bil-2/CHUTKI-IMAGE-TOOL/discussions)
 
