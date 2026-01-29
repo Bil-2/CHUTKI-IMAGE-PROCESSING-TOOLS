@@ -3,14 +3,73 @@ import { Link } from "react-router-dom";
 import { toolsConfig } from "../toolsConfig";
 import ScrollEffect from "./shared/ScrollEffect";
 import {
-  LuUserSquare, LuMinimize2, LuMaximize2, LuCrop, LuRotateCw,
+  LuUser, LuMinimize2, LuMaximize2, LuCrop, LuRotateCw,
   LuMoveHorizontal, LuFileType2, LuFileText, LuStamp, LuPenTool,
   LuEraser, LuEyeOff, LuImage, LuFiles, LuScissors, LuPalette,
-  LuScanFace, LuWand2, LuFileType, LuLayers, LuGrid3X3, LuSplit,
+  LuScanFace, LuSparkles, LuFileType, LuLayers, LuGrid3X3, LuSplit,
   LuCircle, LuGhost, LuAperture, LuContrast
 } from "react-icons/lu";
 
 const tools = toolsConfig;
+
+// Helper to get tool link
+const getToolLink = (toolName) => {
+  for (const category of Object.values(toolsConfig)) {
+    const tool = category.find((t) => t.name === toolName);
+    if (tool) return tool.route;
+  }
+  const toolNameLower = toolName.toLowerCase();
+  if (toolNameLower.includes("passport photo maker")) return "/passport-photo";
+  if (toolNameLower.includes("heic to jpg")) return "/tools/heic-to-jpg";
+  if (toolNameLower.includes("webp to jpg")) return "/tools/webp-to-jpg";
+  if (toolNameLower.includes("jpeg to png")) return "/tools/jpeg-to-png";
+  if (toolNameLower.includes("png to jpeg")) return "/tools/png-to-jpeg";
+  return "/tools";
+};
+
+// Privacy notice component
+const PrivacyNotice = () => {
+  const [visible, setVisible] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    // Start fade-out 0.5s before removal
+    const timer = setTimeout(() => {
+      setFadeOut(true);
+      // After fade transition ends, hide completely
+      setTimeout(() => setVisible(false), 400);
+    }, 2500); // Show for 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div
+      className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 transition-opacity duration-500 ${fadeOut ? "opacity-0" : "opacity-100"
+        }`}
+    >
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0">
+          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Privacy Notice</h3>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            Your images are automatically deleted after 30 minutes. We care about your privacy and security.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
   // Helper to get icon based on tool name
@@ -18,7 +77,7 @@ const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
     const n = name.toLowerCase();
 
     // Identity & Passport
-    if (n.includes("passport") || n.includes("pan") || n.includes("ssc") || n.includes("upsc")) return <LuUserSquare className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("passport") || n.includes("pan") || n.includes("ssc") || n.includes("upsc")) return <LuUser className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
 
     // Compression & Size
     if (n.includes("compress") || n.includes("reduce") || n.includes("kb") || n.includes("mb")) return <LuMinimize2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
@@ -46,69 +105,11 @@ const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
     if (n.includes("text") || n.includes("ocr")) return <LuScanFace className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
 
     // AI & Advanced
-    if (n.includes("ai") || n.includes("generator")) return <LuWand2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("ai") || n.includes("generator")) return <LuSparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
     if (n.includes("black") || n.includes("gray") || n.includes("white")) return <LuContrast className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
 
     // Default
     return <LuImage className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
-  };
-
-  // Privacy notice with smooth fade-out
-  const PrivacyNotice = () => {
-    const [visible, setVisible] = useState(true);
-    const [fadeOut, setFadeOut] = useState(false);
-
-    useEffect(() => {
-      // Start fade-out 0.5s before removal
-      const timer = setTimeout(() => {
-        setFadeOut(true);
-        // After fade transition ends, hide completely
-        setTimeout(() => setVisible(false), 400);
-      }, 2500); // Show for 3 seconds
-
-      return () => clearTimeout(timer);
-    }, []);
-
-    if (!visible) return null;
-
-    return (
-      <div
-        className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 transition-opacity duration-500 ${fadeOut ? "opacity-0" : "opacity-100"
-          }`}
-      >
-        <div className="flex items-start space-x-3">
-          <div className="flex-shrink-0">
-            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Privacy Notice</h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Your images are automatically deleted after 30 minutes. We care about your privacy and security.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const getToolLink = (toolName) => {
-    for (const category of Object.values(toolsConfig)) {
-      const tool = category.find((t) => t.name === toolName);
-      if (tool) return tool.route;
-    }
-    const toolNameLower = toolName.toLowerCase();
-    if (toolNameLower.includes("passport photo maker")) return "/passport-photo";
-    if (toolNameLower.includes("heic to jpg")) return "/tools/heic-to-jpg";
-    if (toolNameLower.includes("webp to jpg")) return "/tools/webp-to-jpg";
-    if (toolNameLower.includes("jpeg to png")) return "/tools/jpeg-to-png";
-    if (toolNameLower.includes("png to jpeg")) return "/tools/png-to-jpeg";
-    return "/tools";
   };
 
   // Filter tools based on search query AND selected category
