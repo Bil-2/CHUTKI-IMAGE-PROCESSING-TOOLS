@@ -71,6 +71,10 @@ const PORT = process.env.PORT || 5001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Trust proxy is required when running behind a proxy like Render/Heroku/Nginx
+// This fixes the ERR_ERL_UNEXPECTED_X_FORWARDED_FOR error
+app.set('trust proxy', 1);
+
 // ================== Security Middleware ==================
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
@@ -102,11 +106,11 @@ app.use((req, res, next) => {
   if (req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000');
   }
-  
+
   // Optimize response headers
   res.setHeader('X-Powered-By', 'CHUTKI');
   res.setHeader('Server', 'CHUTKI-Server');
-  
+
   next();
 });
 
@@ -307,14 +311,14 @@ app.get("/api/health", (req, res) => {
   // Set performance headers
   res.setHeader('Cache-Control', 'public, max-age=30');
   res.setHeader('X-Response-Time', Date.now());
-  
+
   const now = Date.now();
-  
+
   // Return cached response if still valid
   if (healthCache && (now - healthCacheTime) < HEALTH_CACHE_TTL) {
     return res.status(200).json(healthCache);
   }
-  
+
   // Generate fresh health data
   const environmentInfo = getEnvironmentInfo();
   const healthData = {
@@ -332,11 +336,11 @@ app.get("/api/health", (req, res) => {
   };
 
   const response = successResponse({ message: 'Service healthy', data: healthData });
-  
+
   // Cache the response
   healthCache = response;
   healthCacheTime = now;
-  
+
   res.status(200).json(response);
 });
 
@@ -433,7 +437,7 @@ const startServer = async () => {
       console.log(`[BACKEND] Backend URL: http://localhost:${PORT}`);
       console.log(`[HEALTH] Health check: http://localhost:${PORT}/api/health`);
       console.log(`[PRIVACY] Privacy Notice: Images are automatically deleted after 30 minutes`);
-      
+
       // Initialize comprehensive cold start prevention system
       const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       initColdStartPrevention(serverUrl);
