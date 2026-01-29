@@ -11,6 +11,16 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Health check for tools router
+router.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Tools router active' });
+});
+
+// PASSIVE WARMUP: Allow simple GET to keep instance warm
+router.get('/', (req, res) => {
+  res.status(200).send('Unified Tools Router Active');
+});
+
 // PERMANENT FIX: Configure Sharp for better memory management
 sharp.cache(false); // Disable cache to prevent memory leaks
 sharp.concurrency(1); // Process one image at a time to prevent memory spikes
