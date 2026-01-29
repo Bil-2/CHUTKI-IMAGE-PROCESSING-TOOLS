@@ -35,7 +35,7 @@ export const validateEnvironment = () => {
   Object.entries(optionalEnvVars).forEach(([varName, defaultValue]) => {
     if (!process.env[varName]) {
       process.env[varName] = defaultValue;
-      warnings.push(`Using default value for ${varName}: ${defaultValue}`);
+      // Silently set default - no warning needed for standard defaults
     }
   });
 
