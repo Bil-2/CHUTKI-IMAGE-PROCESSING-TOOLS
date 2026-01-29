@@ -2,10 +2,57 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toolsConfig } from "../toolsConfig";
 import ScrollEffect from "./shared/ScrollEffect";
+import {
+  LuUserSquare, LuMinimize2, LuMaximize2, LuCrop, LuRotateCw,
+  LuMoveHorizontal, LuFileType2, LuFileText, LuStamp, LuPenTool,
+  LuEraser, LuEyeOff, LuImage, LuFiles, LuScissors, LuPalette,
+  LuScanFace, LuWand2, LuFileType, LuLayers, LuGrid3X3, LuSplit,
+  LuCircle, LuGhost, LuAperture, LuContrast
+} from "react-icons/lu";
 
 const tools = toolsConfig;
 
 const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
+  // Helper to get icon based on tool name
+  const getToolIcon = (name) => {
+    const n = name.toLowerCase();
+
+    // Identity & Passport
+    if (n.includes("passport") || n.includes("pan") || n.includes("ssc") || n.includes("upsc")) return <LuUserSquare className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // Compression & Size
+    if (n.includes("compress") || n.includes("reduce") || n.includes("kb") || n.includes("mb")) return <LuMinimize2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // Resizing & Scaling
+    if (n.includes("resize") || n.includes("increase") || n.includes("resolution")) return <LuMaximize2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // Editing & effects
+    if (n.includes("crop")) return <LuCrop className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("rotate")) return <LuRotateCw className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("flip")) return <LuMoveHorizontal className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("watermark")) return <LuStamp className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("signature")) return <LuPenTool className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("background")) return <LuEraser className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("blur") || n.includes("pixelate") || n.includes("censor")) return <LuEyeOff className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("color")) return <LuPalette className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("grid")) return <LuGrid3X3 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("split")) return <LuSplit className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("circle")) return <LuCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("join")) return <LuLayers className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // File Conversion
+    if (n.includes("pdf")) return <LuFileText className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("convert") || n.includes("to")) return <LuFileType2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("text") || n.includes("ocr")) return <LuScanFace className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // AI & Advanced
+    if (n.includes("ai") || n.includes("generator")) return <LuWand2 className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+    if (n.includes("black") || n.includes("gray") || n.includes("white")) return <LuContrast className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+
+    // Default
+    return <LuImage className="w-8 h-8 sm:w-10 sm:h-10 text-white" />;
+  };
+
   // Privacy notice with smooth fade-out
   const PrivacyNotice = () => {
     const [visible, setVisible] = useState(true);
@@ -131,8 +178,8 @@ const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
                     <div className="relative flex flex-col items-center text-center flex-1">
                       {/* Icon Container with Badge */}
                       <div className="relative mb-4">
-                        <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold shadow-lg group-hover:shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                          {tool.name.charAt(0)}
+                        <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                          {getToolIcon(tool.name)}
                         </div>
                         {/* Pulse animation ring */}
                         <div className="absolute inset-0 rounded-2xl border-2 border-purple-400 opacity-0 group-hover:opacity-75 group-hover:scale-125 transition-all duration-500"></div>
