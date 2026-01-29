@@ -37,7 +37,7 @@ function AppContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, loading, logout } = useAuth();
-  
+
   // Enable smooth scrolling
   useSmoothScroll();
 
@@ -83,76 +83,17 @@ function AppContent() {
     return <LoadingSpinner message="Initializing CHUTKI..." />;
   }
 
-  // Check localStorage as backup before redirecting
-  const token = localStorage.getItem('token');
-  
-  // If not authenticated and no token, show only login/register routes
-  if (!isAuthenticated && !token) {
-    return (
-      <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              borderRadius: '20px',
-              padding: '20px 24px',
-              fontSize: '15px',
-              fontWeight: '500',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1)',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              backdropFilter: 'blur(10px)',
-              minWidth: '300px',
-              maxWidth: '400px',
-            },
-            success: {
-              style: {
-                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: '#fff',
-                borderRadius: '20px',
-                padding: '20px 24px',
-                fontSize: '15px',
-                fontWeight: '500',
-                boxShadow: '0 20px 40px rgba(16, 185, 129, 0.3), 0 8px 16px rgba(16, 185, 129, 0.2)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-              },
-            },
-            error: {
-              style: {
-                background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-                color: '#fff',
-                borderRadius: '20px',
-                padding: '20px 24px',
-                fontSize: '15px',
-                fontWeight: '500',
-                boxShadow: '0 20px 40px rgba(239, 68, 68, 0.3), 0 8px 16px rgba(239, 68, 68, 0.2)',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-              },
-            },
-          }}
-        />
+  // Check localStorage as backup (optional purely for state sync, not for blocking)
+  // const token = localStorage.getItem('token');
 
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/auth-success" element={<AuthSuccess />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    );
-  }
+  // MERGED VIEW: We allow everyone to see the app structure
+  // and handle authentication status in the Header and specific Routes.
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
       {/* Scroll Progress Bar */}
       <ScrollProgressBar />
-      
+
       {/* Toast Notifications */}
       <Toaster
         position="top-right"
@@ -233,17 +174,26 @@ function AppContent() {
               )}
             </button>
 
-            {/* Profile Button */}
-            <button
-              onClick={() => navigate('/profile')}
-              className="rounded-full p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105"
-              aria-label="View Profile"
-              title="Profile"
-            >
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </button>
+            {/* Authentication Status */}
+            {!isAuthenticated ? (
+              <button
+                onClick={() => navigate('/login')}
+                className="px-4 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+              >
+                Login
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/profile')}
+                className="rounded-full p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105"
+                aria-label="View Profile"
+                title="Profile"
+              >
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
 
             {/* Menu Button */}
             <button
@@ -303,12 +253,13 @@ function AppContent() {
 
       {/* ========= ROUTES ========= */}
       <Routes>
-        {/* Home Page */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth-success" element={<AuthSuccess />} />
 
         {/* Dashboard */}
         <Route path="/dashboard" element={
@@ -325,55 +276,23 @@ function AppContent() {
         } />
 
         {/* Individual Tool Routes */}
-        <Route path="/tools/passport-photo" element={
-          <ProtectedRoute>
-            <PassportPhotoTool />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/resize-pixel" element={
-          <ProtectedRoute>
-            <ResizePixelTool />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/compress-50kb" element={
-          <ProtectedRoute>
-            <CompressImageTool />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/rotate" element={
-          <ProtectedRoute>
-            <RotateImageTool />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/flip" element={
-          <ProtectedRoute>
-            <FlipImageTool />
-          </ProtectedRoute>
-        } />
-        <Route path="/tools/heic-to-jpg" element={
-          <ProtectedRoute>
-            <HeicToJpgTool />
-          </ProtectedRoute>
-        } />
+        <Route path="/tools/passport-photo" element={<PassportPhotoTool />} />
+        <Route path="/tools/resize-pixel" element={<ResizePixelTool />} />
+        <Route path="/tools/compress-50kb" element={<CompressImageTool />} />
+        <Route path="/tools/rotate" element={<RotateImageTool />} />
+        <Route path="/tools/flip" element={<FlipImageTool />} />
+        <Route path="/tools/heic-to-jpg" element={<HeicToJpgTool />} />
 
         {/* Image Tools */}
-        <Route path="/image-tools" element={
-          <ProtectedRoute>
-            <ImageTools />
-          </ProtectedRoute>
-        } />
+        <Route path="/image-tools" element={<ImageTools />} />
 
         {/* Dynamic route for all tools - this will catch any /tools/* path */}
-        <Route path="/tools/:toolName" element={
-          <ProtectedRoute>
-            <GenericToolPage />
-          </ProtectedRoute>
-        } />
+        <Route path="/tools/:toolName" element={<GenericToolPage />} />
 
         {/* Catch all route - redirect unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-        
+
       {/* Scroll to Top Button */}
       <ScrollToTop />
     </div>

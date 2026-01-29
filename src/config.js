@@ -6,7 +6,7 @@ const config = {
 
   // Frontend URL - Use localhost for development, production URL for production
   FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL ||
-    (import.meta.env.PROD ? 'https://your-frontend-url.netlify.app' : 'http://localhost:5173'),
+    (import.meta.env.PROD ? 'https://chutki-image-tool.netlify.app' : 'http://localhost:5173'),
 
   // API endpoints
   ENDPOINTS: {

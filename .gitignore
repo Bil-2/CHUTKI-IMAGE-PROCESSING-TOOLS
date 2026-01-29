@@ -167,3 +167,6 @@ docs/build/
 # package-lock.json
 # yarn.lock
 .env*.local
+
+# Local Netlify folder
+.netlify
