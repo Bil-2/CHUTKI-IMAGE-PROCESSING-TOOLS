@@ -178,9 +178,13 @@ function AppContent() {
             {!isAuthenticated ? (
               <button
                 onClick={() => navigate('/login')}
-                className="px-4 py-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 text-white text-sm font-medium transition-all duration-300 hover:scale-105"
+                className="rounded-full p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105"
+                aria-label="Login"
+                title="Login / Register"
               >
-                Login
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
               </button>
             ) : (
               <button
