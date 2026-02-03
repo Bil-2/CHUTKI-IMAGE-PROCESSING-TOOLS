@@ -1,20 +1,18 @@
 version: "3.8"
 
 services:
-  # MongoDB Database
+  # 1. MongoDB Database Service
   mongodb:
     image: mongo:7.0
     container_name: chutki-mongodb
     restart: unless-stopped
     environment:
-      # Default credentials - CHANGE THESE in production
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password123
       MONGO_INITDB_DATABASE: chutki
     ports:
       - "27017:27017"
     volumes:
-      # Persist MongoDB data
       - mongodb_data:/data/db
     networks:
       - chutki-network
@@ -25,60 +23,58 @@ services:
       retries: 5
       start_period: 10s
 
-  # CHUTKI Application (Backend + Frontend)
-  chutki-app:
+  # 2. Backend API Service
+  backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: chutki-app
+    container_name: chutki-backend
     restart: unless-stopped
     ports:
-      # Application will be accessible at http://localhost:5001
       - "5001:5001"
     environment:
-      # Application Configuration
       NODE_ENV: production
       PORT: 5001
-      
-      # Database Configuration
-      # Connect to mongodb service using Docker network
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/chutki?authSource=admin
+      # Allow requests from the frontend container (nginx) and host
+      CLIENT_URL: http://localhost:5173 
       
       # Security Secrets - CHANGE THESE in production
-      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret-change-this}
-      SESSION_SECRET: ${SESSION_SECRET:-your-super-secure-session-secret-change-this}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret}
+      SESSION_SECRET: ${SESSION_SECRET:-your-super-secure-session-secret}
       
-      # CORS Configuration
-      # Set to your actual domain in production
-      CLIENT_URL: ${CLIENT_URL:-http://localhost:5001}
-      
-      # Optional: Google Auth (uncomment if using)
+      # Optional Configs
       # GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      
-      # Optional: Email Service (uncomment if using)
       # SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       # FROM_EMAIL: ${FROM_EMAIL}
     depends_on:
       mongodb:
         condition: service_healthy
     volumes:
-      # Persist uploaded files (optional, since app uses memory processing)
       - ./backend/uploads:/app/uploads
     networks:
       - chutki-network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:5001/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
-        ]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5001/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 10s
+
+  # 3. Frontend Web Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: chutki-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80" # Map host 5173 to Nginx 80
+    depends_on:
+      - backend
+    networks:
+      - chutki-network
 
 # Persistent volumes
 volumes:
