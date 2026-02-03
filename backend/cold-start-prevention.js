@@ -39,7 +39,7 @@ class ColdStartPrevention extends EventEmitter {
       const intervalId = setInterval(() => {
         this.performSelfPing(name);
       }, time);
-      
+
       this.intervals.push(intervalId);
       console.log(`[COLD-START] ${name} interval started`);
     });
@@ -54,7 +54,7 @@ class ColdStartPrevention extends EventEmitter {
 
     try {
       const startTime = Date.now();
-      
+
       const response = await fetch(`${this.serverUrl}/api/health`, {
         method: 'GET',
         headers: {
@@ -70,13 +70,13 @@ class ColdStartPrevention extends EventEmitter {
       if (response.ok) {
         this.stats.successfulPings++;
         this.stats.lastSuccessTime = new Date();
-        
+
         console.log(`[COLD-START] ✅ Self-ping successful [${source}] (${responseTime}ms)`);
         this.emit('ping:success', { source, responseTime });
 
-        // If response is slow, trigger additional warm-up
-        if (responseTime > 3000) {
-          console.log(`[COLD-START] ⚠️ Slow response detected, triggering warm-up...`);
+        // If response is slow OR this is the first successful ping, trigger warm-up
+        if (responseTime > 3000 || this.stats.successfulPings === 1) {
+          console.log(`[COLD-START] ${responseTime > 3000 ? '⚠️ Slow response' : '🔥 First ping'}, triggering warm-up...`);
           this.warmUpEndpoints();
         }
       } else {
@@ -93,6 +93,7 @@ class ColdStartPrevention extends EventEmitter {
 
   async warmUpEndpoints() {
     const endpoints = [
+      '/api/warmup',
       '/api/tools/health',
       '/api/tools/list',
       '/api/auth/status'
@@ -107,7 +108,7 @@ class ColdStartPrevention extends EventEmitter {
       } catch (error) {
         // Silent fail for warm-up
       }
-      
+
       // Small delay between requests
       await new Promise(resolve => setTimeout(resolve, 500));
     }
@@ -118,7 +119,7 @@ class ColdStartPrevention extends EventEmitter {
   // Activity monitoring - track incoming requests
   trackActivity() {
     this.stats.uptime = process.uptime();
-    
+
     // Log stats every hour
     setInterval(() => {
       this.logStats();
@@ -126,7 +127,7 @@ class ColdStartPrevention extends EventEmitter {
   }
 
   logStats() {
-    const successRate = this.stats.totalPings > 0 
+    const successRate = this.stats.totalPings > 0
       ? Math.round((this.stats.successfulPings / this.stats.totalPings) * 100)
       : 0;
 
@@ -145,7 +146,7 @@ class ColdStartPrevention extends EventEmitter {
   getStats() {
     return {
       ...this.stats,
-      successRate: this.stats.totalPings > 0 
+      successRate: this.stats.totalPings > 0
         ? Math.round((this.stats.successfulPings / this.stats.totalPings) * 100)
         : 0
     };
@@ -166,7 +167,7 @@ export const initColdStartPrevention = (serverUrl) => {
     instance = new ColdStartPrevention(serverUrl);
     instance.startSelfPing();
     instance.trackActivity();
-    
+
     console.log('[COLD-START] ✅ Prevention system initialized');
   }
   return instance;

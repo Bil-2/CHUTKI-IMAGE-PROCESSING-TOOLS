@@ -309,6 +309,55 @@ app.get('/api/debug/routes', (req, res) => {
   });
 });
 
+// ================== Health & Monitoring Endpoints ==================
+
+// Ultra-lightweight ping endpoint for cold start prevention
+// No database checks, minimal processing - responds in <100ms
+app.get("/ping", (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Powered-By', 'CHUTKI');
+  res.status(200).json({
+    status: "pong",
+    timestamp: Date.now(),
+    uptime: Math.floor(process.uptime())
+  });
+});
+
+// Warmup endpoint to pre-load dependencies after cold start
+app.get("/api/warmup", async (req, res) => {
+  try {
+    const startTime = Date.now();
+
+    // Pre-warm image processing libraries
+    const warmupTasks = [
+      // Test Sharp
+      sharp(Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]))
+        .metadata()
+        .catch(() => { }),
+
+      // Ensure database connection is active
+      mongoose.connection.db ? Promise.resolve() : Promise.reject(),
+    ];
+
+    await Promise.allSettled(warmupTasks);
+
+    const warmupTime = Date.now() - startTime;
+
+    res.status(200).json({
+      success: true,
+      message: 'Server warmed up successfully',
+      warmupTime: `${warmupTime}ms`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(200).json({
+      success: true,
+      message: 'Warmup completed with warnings',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Optimized health check endpoint with caching
 let healthCache = null;
 let healthCacheTime = 0;

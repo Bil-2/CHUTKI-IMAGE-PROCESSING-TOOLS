@@ -2,8 +2,8 @@ name: Keep Server Alive (Cold Start Prevention)
 
 on:
   schedule:
-    # Run every 12 minutes to prevent Render free tier cold starts
-    - cron: '*/12 * * * *'
+    # Run every 10 minutes to prevent Render free tier cold starts (safer margin from 15-min threshold)
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
@@ -58,4 +58,5 @@ jobs:
       - name: Summary
         run: |
           echo "📊 Keep-alive check completed at $(date)"
-          echo "🚀 Next check in 12 minutes"
+          echo "🚀 Next check in 10 minutes"
+          echo "🛡️  Cold start prevention: ACTIVE"
