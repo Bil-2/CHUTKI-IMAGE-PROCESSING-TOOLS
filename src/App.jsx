@@ -14,6 +14,9 @@ import Home from "./components/Home";
 import Dashboard from "./components/Dashboard";
 import ImageTools from "./components/ImageTools";
 import GenericToolPage from "./components/GenericToolPage";
+import ImageEditingTools from "./components/tools/ImageEditingTools";
+import ImageConversionTools from "./components/tools/ImageConversionTools";
+import ImageCompressionTools from "./components/tools/ImageCompressionTools";
 import AuthSuccess from "./components/AuthSuccess";
 import Logo from "./components/Logo";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -287,8 +290,13 @@ function AppContent() {
         <Route path="/tools/flip" element={<FlipImageTool />} />
         <Route path="/tools/heic-to-jpg" element={<HeicToJpgTool />} />
 
-        {/* Image Tools */}
+        {/* Image Tools Hub */}
         <Route path="/image-tools" element={<ImageTools />} />
+
+        {/* Category Pages */}
+        <Route path="/image-editing-tools" element={<ImageEditingTools />} />
+        <Route path="/image-conversion-tools" element={<ImageConversionTools />} />
+        <Route path="/image-compression-tools" element={<ImageCompressionTools />} />
 
         {/* Dynamic route for all tools - this will catch any /tools/* path */}
         <Route path="/tools/:toolName" element={<GenericToolPage />} />

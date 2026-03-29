@@ -7,10 +7,50 @@ import {
   LuMoveHorizontal, LuFileType2, LuFileText, LuStamp, LuPenTool,
   LuEraser, LuEyeOff, LuImage, LuFiles, LuScissors, LuPalette,
   LuScanFace, LuSparkles, LuFileType, LuLayers, LuGrid3X3, LuSplit,
-  LuCircle, LuGhost, LuAperture, LuContrast
+  LuCircle, LuGhost, LuAperture, LuContrast,
+  LuArrowLeftRight, LuArrowRight
 } from "react-icons/lu";
 
+
+
 const tools = toolsConfig;
+
+const CATEGORY_HUB = [
+  {
+    title: "Image Editing Tools",
+    desc: "Resize, rotate, watermark, crop & more",
+    count: 47,
+    route: "/image-editing-tools",
+    from: "from-violet-500",
+    via: "via-purple-600",
+    to: "to-fuchsia-600",
+    border: "hover:border-purple-400",
+    icon: <LuCrop className="w-7 h-7 text-white" />,
+  },
+  {
+    title: "Image Conversion Tools",
+    desc: "Convert between JPG, PNG, PDF, HEIC & more",
+    count: 13,
+    route: "/image-conversion-tools",
+    from: "from-blue-500",
+    via: "via-cyan-500",
+    to: "to-teal-500",
+    border: "hover:border-blue-400",
+    icon: <LuArrowLeftRight className="w-7 h-7 text-white" />,
+  },
+  {
+    title: "Image Compression Tools",
+    desc: "Compress images to exact KB or MB targets",
+    count: 21,
+    route: "/image-compression-tools",
+    from: "from-emerald-500",
+    via: "via-green-500",
+    to: "to-teal-600",
+    border: "hover:border-emerald-400",
+    icon: <LuMinimize2 className="w-7 h-7 text-white" />,
+  },
+];
+
 
 // Helper to get tool link
 const getToolLink = (toolName) => {
@@ -130,7 +170,38 @@ const ImageTools = ({ searchQuery, selectedCategory = "All" }) => {
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+
+      {/* ── Category Shortcut Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-10">
+        {CATEGORY_HUB.map((cat) => (
+          <Link
+            key={cat.route}
+            to={cat.route}
+            className={`group relative overflow-hidden rounded-2xl p-6 border-2 border-transparent ${cat.border} transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-white dark:bg-gray-800 shadow-md`}
+          >
+            {/* gradient bg */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${cat.from} ${cat.via} ${cat.to} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+            <div className="relative flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${cat.from} ${cat.via} ${cat.to} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                {cat.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">{cat.title}</h3>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${cat.from} ${cat.to}`}>
+                    {cat.count}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{cat.desc}</p>
+              </div>
+              <LuArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-white group-hover:translate-x-1 transition-all duration-300 flex-shrink-0" />
+            </div>
+          </Link>
+        ))}
+      </div>
+
       {/* Privacy Notice with fade-out */}
+
       <ScrollEffect animation="fade-down" duration={600}>
         <PrivacyNotice />
       </ScrollEffect>
