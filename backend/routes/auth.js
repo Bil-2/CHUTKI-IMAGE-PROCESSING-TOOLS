@@ -100,91 +100,55 @@ router.get('/verify', requireDatabase, verifyToken);
 router.get('/profile', requireDatabase, protect, getProfile);
 router.put('/profile', requireDatabase, protect, updateProfile);
 
-// Google OAuth routes - Check credentials and database connection
-const hasGoogleCredentials = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
-const databaseConnected = global.DATABASE_CONNECTED !== false;
-
-if (hasGoogleCredentials && databaseConnected) {
+// Google OAuth routes — always registered, credentials/DB checked at request time
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Google OAuth initiation
-  router.get('/google', passport.authenticate('google', {
-    scope: ['profile', 'email']
-  }));
+  router.get('/google', (req, res, next) => {
+    if (!global.DATABASE_CONNECTED) {
+      return res.status(503).json({ success: false, message: 'Database not connected', error: 'DATABASE_UNAVAILABLE' });
+    }
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
 
-  // Google OAuth callback handler with enhanced error handling
-  const googleCallback = async (req, res) => {
-    try {
-      console.log('[OAUTH] Callback received');
-      console.log('[OAUTH] Database connected:', global.DATABASE_CONNECTED);
-      console.log('[OAUTH] User object:', req.user ? 'Present' : 'Missing');
-
-      // Check database connection
+  // Google OAuth callback
+  router.get('/google/callback',
+    (req, res, next) => {
       if (!global.DATABASE_CONNECTED) {
-        console.error('[OAUTH] Database not connected');
         return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=database_unavailable`);
       }
-
-      if (!req.user) {
-        console.error('[OAUTH] No user object in request');
-        return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+      passport.authenticate('google', {
+        failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
+        session: true
+      })(req, res, next);
+    },
+    async (req, res) => {
+      try {
+        console.log('[OAUTH] Callback received, user:', req.user ? req.user.email : 'Missing');
+        if (!req.user) {
+          return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+        }
+        const token = jwt.sign(
+          { userId: req.user._id, email: req.user.email, provider: req.user.provider || 'google' },
+          process.env.JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`);
+      } catch (error) {
+        console.error('[OAUTH] Callback error:', error.message);
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
       }
-
-      console.log('[OAUTH] User ID:', req.user._id);
-      console.log('[OAUTH] User email:', req.user.email);
-
-      // Generate JWT token
-      const token = jwt.sign(
-        {
-          userId: req.user._id,
-          email: req.user.email,
-          provider: req.user.provider || 'google'
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      console.log('[OAUTH] Token generated successfully');
-
-      // Redirect to success page with token
-      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth-success?token=${token}`;
-      console.log('[OAUTH] Redirecting to:', redirectUrl);
-
-      res.redirect(redirectUrl);
-    } catch (error) {
-      console.error('[OAUTH] Callback error:', error);
-      console.error('[OAUTH] Error stack:', error.stack);
-      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_error`);
     }
-  };
-
-  router.get('/google/callback',
-    passport.authenticate('google', {
-      failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`,
-      session: true
-    }),
-    googleCallback
   );
 
   console.log('✅ Google OAuth routes initialized successfully');
 } else {
-  // Fallback routes for when Google OAuth is disabled or database unavailable
   router.get('/google', (req, res) => {
-    const reason = !databaseConnected ? 'Database not available' : 'Google OAuth is not configured';
-    const error = !databaseConnected ? 'DATABASE_UNAVAILABLE' : 'OAUTH_DISABLED';
-
-    res.status(503).json({
-      success: false,
-      message: reason,
-      error: error
-    });
+    res.status(503).json({ success: false, message: 'Google OAuth not configured', error: 'OAUTH_DISABLED' });
   });
-
   router.get('/google/callback', (req, res) => {
-    const errorParam = !databaseConnected ? 'database_unavailable' : 'oauth_disabled';
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=${errorParam}`);
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_disabled`);
   });
-
-  const reason = !databaseConnected ? 'database unavailable' : 'OAuth not configured';
-  console.log(`📝 Google OAuth routes disabled - ${reason}`);
+  console.log('📝 Google OAuth routes disabled — GOOGLE_CLIENT_ID/SECRET not set');
 }
 
 export default router;
