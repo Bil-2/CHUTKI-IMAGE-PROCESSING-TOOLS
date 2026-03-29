@@ -2,61 +2,84 @@ name: Keep Server Alive (Cold Start Prevention)
 
 on:
   schedule:
-    # Run every 10 minutes to prevent Render free tier cold starts (safer margin from 15-min threshold)
+    # Run every 10 minutes to prevent Render free tier cold starts
+    # Render spins down after 15 min of inactivity — 10 min keeps it warm
     - cron: '*/10 * * * *'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Ping Backend Health Endpoint
+      - name: Wake Up Backend (Cold Start Tolerant)
         run: |
           echo "🔥 Pinging CHUTKI backend to prevent cold start..."
-          
-          # Ping with retry logic
-          max_retries=3
+          echo "⏳ Note: Render free tier cold starts can take 30-90 seconds"
+
+          BACKEND_URL="https://chutki-image-processing-tools.onrender.com"
+          max_retries=4
           retry_count=0
           success=false
-          
+
           while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
-            echo "Attempt $((retry_count + 1))/$max_retries"
-            
-            if curl -f -s -o /dev/null -w "%{http_code}" \
+            attempt=$((retry_count + 1))
+            echo "🔄 Attempt $attempt/$max_retries — waiting up to 90s for response..."
+
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
               -H "User-Agent: GitHub-Actions-KeepAlive" \
               -H "X-Keep-Alive: true" \
-              --max-time 30 \
-              https://chutki-image-processing-tools.onrender.com/api/health | grep -q "200"; then
-              echo "✅ Server is alive and responding"
+              --connect-timeout 15 \
+              --max-time 90 \
+              "${BACKEND_URL}/api/health" 2>&1)
+
+            echo "   HTTP status: $HTTP_CODE"
+
+            if echo "$HTTP_CODE" | grep -qE "^(200|201|202)$"; then
+              echo "✅ Server is alive and responding (HTTP $HTTP_CODE)"
               success=true
             else
-              echo "⚠️ Ping failed, retrying in 10s..."
+              echo "⚠️  Server not ready yet (HTTP $HTTP_CODE), retrying in 20s..."
               retry_count=$((retry_count + 1))
-              sleep 10
+              if [ $retry_count -lt $max_retries ]; then
+                sleep 20
+              fi
             fi
           done
-          
-          if [ "$success" = false ]; then
-            echo "❌ Failed to reach server after $max_retries attempts"
-            exit 1
-          fi
 
-      - name: Ping Tools Health Endpoint
-        run: |
-          echo "🛠️ Pinging tools endpoint..."
-          
-          if curl -f -s -o /dev/null -w "%{http_code}" \
-            -H "User-Agent: GitHub-Actions-KeepAlive" \
-            --max-time 20 \
-            https://chutki-image-processing-tools.onrender.com/api/tools/health | grep -q "200"; then
-            echo "✅ Tools endpoint is healthy"
+          if [ "$success" = true ]; then
+            echo "🎉 Keep-alive ping successful!"
           else
-            echo "⚠️ Tools endpoint check failed (non-critical)"
+            echo "⚠️  Server did not respond after $max_retries attempts."
+            echo "   This is expected if the server is in a deep cold start."
+            echo "   The next ping in 10 minutes should succeed once the server is warm."
+            echo "   ✅ NOT marking as failure — cold starts are handled gracefully."
           fi
+          # Always exit 0: failing this job only generates spam emails, not useful alerts.
+          exit 0
+
+      - name: Ping Tools Endpoint (Non-Critical)
+        run: |
+          BACKEND_URL="https://chutki-image-processing-tools.onrender.com"
+          echo "🛠️  Pinging tools health endpoint..."
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "User-Agent: GitHub-Actions-KeepAlive" \
+            --connect-timeout 10 \
+            --max-time 45 \
+            "${BACKEND_URL}/api/tools/health" 2>&1)
+
+          if echo "$HTTP_CODE" | grep -qE "^(200|201|202)$"; then
+            echo "✅ Tools endpoint is healthy (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️  Tools endpoint returned HTTP $HTTP_CODE (non-critical, server may still be warming)"
+          fi
+          exit 0
 
       - name: Summary
         run: |
-          echo "📊 Keep-alive check completed at $(date)"
-          echo "🚀 Next check in 10 minutes"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Keep-alive check completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "🚀 Next check scheduled in 10 minutes"
           echo "🛡️  Cold start prevention: ACTIVE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
