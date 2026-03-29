@@ -1,7 +1,7 @@
 // CHUTKI Keep-Alive Service v3 - Maximum Uptime Protection
 // Multi-layer approach to prevent cold starts completely
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://chutki-image-processing-tools.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || 'https://chutki-backend-bfcn.onrender.com';
 
 // Multiple ping intervals for redundancy
 const PING_INTERVALS = [

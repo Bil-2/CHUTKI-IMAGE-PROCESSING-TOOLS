@@ -176,21 +176,34 @@ if (process.env.NODE_ENV === 'production') {
 // Import connect-mongo for persistent session storage
 import MongoStore from "connect-mongo";
 
-// Session configuration
-app.use(session({
+// Session configuration - use MongoStore only if MongoDB URI is available
+const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'your-session-secret',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 24 * 60 * 60 // 1 day
-  }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-}));
+};
+
+// Only use MongoStore if we have a valid MongoDB URI (prevents crash on startup)
+if (process.env.MONGODB_URI && process.env.MONGODB_URI.startsWith('mongodb')) {
+  try {
+    sessionConfig.store = MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      ttl: 24 * 60 * 60 // 1 day
+    });
+    console.log('[SESSION] Using MongoStore for session persistence');
+  } catch (err) {
+    console.warn('[SESSION] MongoStore failed, using in-memory sessions:', err.message);
+  }
+} else {
+  console.log('[SESSION] Using in-memory session store (no MongoDB URI)');
+}
+
+app.use(session(sessionConfig));
 
 // Passport middleware
 app.use(passport.initialize());
