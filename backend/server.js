@@ -1,4 +1,16 @@
 // backend/server.js
+
+// ⚡ CRITICAL: Catch ALL unhandled promise rejections (e.g. MongoDB DNS errors)
+// so the server process never crashes silently on Render
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION] Caught:', reason?.message || reason);
+  // Do NOT exit — let the server keep running without DB if needed
+});
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION] Caught:', err?.message || err);
+  // Do NOT exit — allows server to stay alive even if a module throws
+});
+
 import express from "express";
 import session from "express-session";
 import cors from "cors";

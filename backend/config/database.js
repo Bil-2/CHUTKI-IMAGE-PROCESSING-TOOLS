@@ -14,16 +14,15 @@ const connectDB = async () => {
 
     // MongoDB connection options optimized for fast cold starts
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 3000, // Timeout after 3s for faster cold start
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-      connectTimeoutMS: 3000, // Connection timeout 3s
-      maxPoolSize: 5, // Smaller pool for faster startup
-      minPoolSize: 1, // Keep at least 1 connection alive
-      heartbeatFrequencyMS: 10000, // Every 10 seconds
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 5000,
+      maxPoolSize: 5,
+      minPoolSize: 1,
+      heartbeatFrequencyMS: 10000,
       retryWrites: true,
       retryReads: true,
+      family: 4, // Force IPv4 to avoid DNS issues on Render
     };
 
     // Try different MongoDB connection strings
@@ -41,20 +40,23 @@ const connectDB = async () => {
       try {
         console.log(`[CONNECTING] Attempting MongoDB connection to: ${uri.replace(/\/\/.*@/, '//***:***@')}`);
 
-        const conn = await mongoose.connect(uri, options);
+        // Wrap in a promise race so unhandled DNS rejections are caught
+        const conn = await Promise.race([
+          mongoose.connect(uri, options),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Connection timeout after 6s')), 6000)
+          )
+        ]);
 
-        console.log(`[SUCCESS] MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`);
+        console.log(`[SUCCESS] MongoDB Connected: ${conn.connection.host}`);
         console.log(`[DATABASE] Database: ${conn.connection.name}`);
 
-        // Set up connection event listeners
         mongoose.connection.on('error', (err) => {
           console.error('[ERROR] MongoDB connection error:', err.message);
         });
-
         mongoose.connection.on('disconnected', () => {
           console.log('[WARNING] MongoDB disconnected');
         });
-
         mongoose.connection.on('reconnected', () => {
           console.log('[SUCCESS] MongoDB reconnected');
         });
@@ -63,7 +65,9 @@ const connectDB = async () => {
         break;
       } catch (error) {
         lastError = error;
-        console.log(`[FAILED] Failed to connect to ${uri}: ${error.message}`);
+        console.log(`[FAILED] Could not connect: ${error.message}`);
+        // Disconnect any partial connection before retrying
+        try { await mongoose.disconnect(); } catch (_) {}
         continue;
       }
     }
