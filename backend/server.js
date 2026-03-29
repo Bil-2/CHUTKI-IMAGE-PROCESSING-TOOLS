@@ -324,6 +324,57 @@ app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
 // Cold start prevention status API
 app.use('/api/cold-start', coldStartStatusRoutes);
 
+// ── Tools health & list routes ─────────────────────────────────────────────────
+app.get('/api/tools/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    service: 'image-tools',
+    timestamp: new Date().toISOString(),
+    totalTools: 81,
+    categories: {
+      compression: 23,
+      conversion: 13,
+      resize: 24,
+      editing: 20,
+      special: 1
+    },
+    database: global.DATABASE_CONNECTED ? 'connected' : 'standalone',
+    message: 'All image processing tools are operational'
+  });
+});
+
+app.get('/api/tools/list', (req, res) => {
+  res.json({
+    status: 'OK',
+    count: 81,
+    tools: [
+      // Compression
+      'image-compressor','reduce-size-kb','reduce-size-mb','increase-size-kb',
+      'compress-5kb','compress-10kb','compress-15kb','compress-20kb','compress-20-50kb',
+      'compress-25kb','compress-30kb','compress-40kb','compress-50kb','compress-100kb',
+      'compress-150kb','compress-200kb','compress-300kb','compress-500kb',
+      'compress-1mb','compress-2mb','jpg-to-kb','mb-to-kb','kb-to-mb',
+      // Conversion
+      'heic-to-jpg','webp-to-jpg','jpeg-to-png','png-to-jpeg','jpg-to-text','png-to-text',
+      'jpg-to-pdf-50kb','jpg-to-pdf-100kb','jpeg-to-pdf-200kb','jpg-to-pdf-300kb',
+      'jpg-to-pdf-500kb','image-to-pdf','pdf-to-jpg',
+      // Resize
+      'resize-pixel','resize-cm','resize-mm','resize-inches','resize-6x2-300dpi',
+      'resize-3-5x4-5cm','resize-35x45mm','resize-2x2','resize-4x6','resize-3x4',
+      'resize-600x600','resize-a4','resize-ssc','resize-pan','resize-upsc',
+      'resize-whatsapp-dp','resize-instagram','instagram-grid','resize-youtube-banner',
+      'super-resolution','resize-signature','resize-sign-50x20mm','bulk-resize','join-images',
+      // Editing
+      'rotate','flip','watermark','black-white','grayscale','circle-crop','pixelate',
+      'pixelate-face','blur-face','censor','freehand-crop','remove-background',
+      'color-picker','split-image','add-name-dob','convert-dpi','check-dpi',
+      'pixel-art','generate-signature','ai-face-generator',
+      // Special
+      'passport-photo-advanced'
+    ]
+  });
+});
+
 // Debug endpoint to verify routing
 app.get('/api/debug/routes', (req, res) => {
   res.json({

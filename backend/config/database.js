@@ -12,11 +12,11 @@ const connectDB = async () => {
       return null;
     }
 
-    // MongoDB connection options optimized for fast cold starts
+    // MongoDB connection options optimized for Render (remote Atlas)
     const options = {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 15000, // ↑ 15s for Render→Atlas latency
+      socketTimeoutMS: 60000,
+      connectTimeoutMS: 15000,         // ↑ 15s connect timeout
       maxPoolSize: 5,
       minPoolSize: 1,
       heartbeatFrequencyMS: 10000,
