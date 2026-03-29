@@ -230,7 +230,7 @@ export const AuthProvider = ({ children }) => {
   // Update user profile
   const updateUser = async (userData) => {
     try {
-      const response = await fetch(`${config.API_BASE_URL}/api/auth/profile`, {
+      const response = await fetch(`${config.API_BASE_URL}/api/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +268,7 @@ export const AuthProvider = ({ children }) => {
     if (!state.token) return null;
 
     try {
-      const response = await fetch(`${config.API_BASE_URL}/api/auth/me`, {
+      const response = await fetch(`${config.API_BASE_URL}/api/auth/verify-token`, {
         headers: {
           'Authorization': `Bearer ${state.token}`
         }

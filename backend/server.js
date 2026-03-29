@@ -39,15 +39,16 @@ import { validateEnvironment, getEnvironmentInfo } from "./utils/envValidation.j
 // Import modular tools router
 import authRoutes from "./routes/auth.js";
 import profileRoutes from "./routes/profile.js";
-import unifiedToolsRoutes from "./api/unified-tools.js";
+// Modular tool category routers (split from unified-tools.js)
+import compressorsRoutes from "./api/tools/compressors.js";
+import convertersRoutes from "./api/tools/converters.js";
+import resizersRoutes from "./api/tools/resizers.js";
+import editorsRoutes from "./api/tools/editors.js";
 import chatgptRoutes from "./api/chatgpt.js";
 import aiChatRoutes from "./api/ai-chat.js";
 
-// Import separate tool routers
-import resizePixelRoutes from "./api/tools/resize-pixel.js";
+// Import passport-photo-advanced (separate advanced router)
 import passportPhotoAdvancedRoutes from "./api/tools/passport-photo-advanced.js";
-import flipRoutes from "./api/tools/flip.js";
-import rotateRoutes from "./api/tools/rotate.js";
 
 // Import cold start status API
 import coldStartStatusRoutes from "./api/cold-start-status.js";
@@ -282,14 +283,18 @@ app.use('/api/chatgpt', chatgptRoutes);
 // AI Chat routes
 app.use('/api/ai', aiChatRoutes);
 
-// Use modular tools router
-app.use('/api/tools', unifiedToolsRoutes);
+// ── Modular tool category routers (ORDER MATTERS: specific before generic) ──
+// Compression tools: compress-Xkb, reduce-size-kb, image-compressor, etc.
+app.use('/api/tools', compressorsRoutes);
+// Conversion tools: heic-to-jpg, image-to-pdf, pdf-to-jpg, OCR, etc.
+app.use('/api/tools', convertersRoutes);
+// Resize tools: resize-pixel, resize-cm, passport sizes, social media, etc.
+app.use('/api/tools', resizersRoutes);
+// Editor tools: rotate, flip, watermark, circle-crop, grayscale, effects, etc.
+app.use('/api/tools', editorsRoutes);
 
-// Use separate tool routers
-app.use('/api/tools/resize-pixel', resizePixelRoutes);
+// Legacy special-case routers (still needed for advanced passport photo)
 app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
-app.use('/api/tools/flip', flipRoutes);
-app.use('/api/tools/rotate', rotateRoutes);
 
 // Cold start prevention status API
 app.use('/api/cold-start', coldStartStatusRoutes);

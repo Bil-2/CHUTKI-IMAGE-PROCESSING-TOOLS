@@ -1,0 +1,316 @@
+// backend/api/tools/editors.js
+// All image editing/effects tools (rotate, flip, watermark, crop, grayscale, filters, etc.)
+
+import express from 'express';
+import multer from 'multer';
+import sharp from 'sharp';
+
+const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => { file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Only images')); }
+});
+
+// ── Face detection helper (simple center-crop for passport) ──────────────────
+const detectAndCropFace = async (buffer) => {
+  const meta = await sharp(buffer).metadata();
+  const size = Math.min(meta.width, meta.height);
+  const left = Math.max(0, Math.floor((meta.width - size) / 2));
+  const top = Math.max(0, Math.floor((meta.height - size) / 3));
+  return sharp(buffer).extract({ left, top, width: size, height: size });
+};
+
+router.post('/:tool', upload.any(), async (req, res) => {
+  try {
+    const { tool } = req.params;
+    const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
+    if (!fileBuffer) return res.status(400).json({ error: 'No image file provided' });
+    const customFilename = req.body.customFilename;
+    let processedBuffer, filename, contentType = 'image/jpeg';
+
+    switch (tool) {
+
+      // ── passport-photo ───────────────────────────────────────────────────────
+      case 'passport-photo': {
+        const { size = '2x2', dpi = 300, background = '#FFFFFF', quantity = 1, enhance = true, country = 'US', complianceCheck = true } = req.body;
+        const countryReqs = {
+          US:{ width:2, height:2, unit:'in', backgroundColor:'#FFFFFF' },
+          UK:{ width:35, height:45, unit:'mm', backgroundColor:'#FFFFFF' },
+          Canada:{ width:35, height:45, unit:'mm', backgroundColor:'#FFFFFF' },
+          Australia:{ width:35, height:45, unit:'mm', backgroundColor:'#FFFFFF' },
+          India:{ width:35, height:35, unit:'mm', backgroundColor:'#FFFFFF' },
+          Germany:{ width:35, height:45, unit:'mm', backgroundColor:'#FFFFFF' },
+          France:{ width:35, height:45, unit:'mm', backgroundColor:'#FFFFFF' },
+          China:{ width:33, height:48, unit:'mm', backgroundColor:'#FFFFFF' }
+        };
+        let pw, ph, bg = background;
+        const d = parseInt(dpi);
+        if (countryReqs[country]) {
+          const r = countryReqs[country]; bg = r.backgroundColor;
+          if (r.unit === 'mm') { pw = Math.round(r.width * d / 25.4); ph = Math.round(r.height * d / 25.4); }
+          else { pw = Math.round(r.width * d / 2.54); ph = Math.round(r.height * d / 2.54); }
+        } else if (size.includes('x')) {
+          const [w, h] = size.split('x').map(s => parseFloat(s));
+          pw = Math.round(w * d / 2.54); ph = Math.round(h * d / 2.54);
+        } else { const s = parseFloat(size); pw = ph = Math.round(s * d / 2.54); }
+
+        let proc = await detectAndCropFace(fileBuffer);
+        if (enhance === 'true' || enhance === true) proc = proc.sharpen({ sigma: 1, m1: 1, m2: 2 }).modulate({ brightness: 1.05, contrast: 1.1 });
+        processedBuffer = await proc.resize(pw, ph, { fit: 'cover', position: 'center' }).flatten({ background: bg }).jpeg({ quality: 95, mozjpeg: true }).toBuffer();
+
+        if (parseInt(quantity) > 1) {
+          const perRow = Math.ceil(Math.sqrt(parseInt(quantity)));
+          const perCol = Math.ceil(parseInt(quantity) / perRow);
+          const compositeArr = [];
+          for (let i = 0; i < parseInt(quantity); i++) {
+            compositeArr.push({ input: processedBuffer, top: Math.floor(i / perRow) * ph, left: (i % perRow) * pw });
+          }
+          processedBuffer = await sharp({ create: { width: pw * perRow, height: ph * perCol, channels: 3, background: { r: 255, g: 255, b: 255 } } }).composite(compositeArr).jpeg({ quality: 95, mozjpeg: true }).toBuffer();
+        }
+        filename = customFilename ? `${customFilename}.jpg` : `passport_${country}_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── rotate ───────────────────────────────────────────────────────────────
+      case 'rotate':
+      case 'rotate-tool': {
+        const { angle = 90, background = 'white', expandCanvas = true, quality = 90 } = req.body;
+        let proc = sharp(fileBuffer);
+        if (expandCanvas === 'false' || expandCanvas === false) {
+          const meta = await sharp(fileBuffer).metadata();
+          proc = proc.rotate(parseFloat(angle), { background, fit: 'cover' }).resize(meta.width, meta.height, { fit: 'cover' });
+        } else { proc = proc.rotate(parseFloat(angle), { background }); }
+        processedBuffer = await proc.jpeg({ quality: parseInt(quality), mozjpeg: true }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `rotated_${angle}_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── flip ─────────────────────────────────────────────────────────────────
+      case 'flip':
+      case 'flip-tool': {
+        const { direction = 'horizontal' } = req.body;
+        let proc = sharp(fileBuffer);
+        proc = direction === 'horizontal' ? proc.flop() : proc.flip();
+        processedBuffer = await proc.jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `flipped_${direction}_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── watermark ────────────────────────────────────────────────────────────
+      case 'watermark': {
+        const { text = 'WATERMARK', position = 'bottom-right', opacity = 0.5, fontSize = 48, color = '#ffffff' } = req.body;
+        const meta = await sharp(fileBuffer).metadata();
+        const posMap = {
+          'top-left':    { x: 20, y: 50, anchor: 'start' },
+          'top-right':   { x: meta.width - 20, y: 50, anchor: 'end' },
+          'bottom-left': { x: 20, y: meta.height - 20, anchor: 'start' },
+          'bottom-right':{ x: meta.width - 20, y: meta.height - 20, anchor: 'end' },
+          'center':      { x: meta.width / 2, y: meta.height / 2, anchor: 'middle' }
+        };
+        const pos = posMap[position] || posMap['bottom-right'];
+        const svg = Buffer.from(`<svg width="${meta.width}" height="${meta.height}"><text x="${pos.x}" y="${pos.y}" font-family="Arial" font-size="${fontSize}" fill="${color}" opacity="${opacity}" text-anchor="${pos.anchor}">${text}</text></svg>`);
+        processedBuffer = await sharp(fileBuffer).composite([{ input: svg, blend: 'over' }]).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `watermarked_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── circle-crop ──────────────────────────────────────────────────────────
+      case 'circle-crop': {
+        const { border = false, borderColor = 'white', borderWidth = 10 } = req.body;
+        const meta = await sharp(fileBuffer).metadata();
+        const size = Math.min(meta.width, meta.height);
+        const mask = Buffer.from(`<svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="white"/></svg>`);
+        let proc = sharp(fileBuffer).resize(size, size, { fit: 'cover' }).composite([{ input: mask, blend: 'dest-in' }]).png();
+        if (border) {
+          const bw = parseInt(borderWidth);
+          const borderMask = Buffer.from(`<svg width="${size+bw*2}" height="${size+bw*2}"><circle cx="${(size+bw*2)/2}" cy="${(size+bw*2)/2}" r="${size/2+bw}" fill="${borderColor}"/></svg>`);
+          proc = sharp({ create: { width: size+bw*2, height: size+bw*2, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+            .composite([{ input: borderMask, blend: 'over' }, { input: await proc.toBuffer(), left: bw, top: bw }]).png();
+        }
+        processedBuffer = await proc.toBuffer();
+        filename = customFilename ? `${customFilename}.png` : `circle_crop_${Date.now()}.png`;
+        contentType = 'image/png';
+        break;
+      }
+
+      // ── grayscale ────────────────────────────────────────────────────────────
+      case 'grayscale':
+        processedBuffer = await sharp(fileBuffer).grayscale().jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `grayscale_${Date.now()}.jpg`;
+        break;
+
+      // ── black-white ──────────────────────────────────────────────────────────
+      case 'black-white':
+        processedBuffer = await sharp(fileBuffer).threshold(128).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `black_white_${Date.now()}.jpg`;
+        break;
+
+      // ── pixelate / pixel-art ─────────────────────────────────────────────────
+      case 'pixelate':
+      case 'pixel-art': {
+        const intensity = parseInt(req.body.intensity || req.body.pixelSize) || 10;
+        const meta = await sharp(fileBuffer).metadata();
+        const sw = Math.max(1, Math.floor(meta.width / intensity));
+        const sh = Math.max(1, Math.floor(meta.height / intensity));
+        processedBuffer = await sharp(fileBuffer).resize(sw, sh, { kernel: 'nearest' }).resize(meta.width, meta.height, { kernel: 'nearest' }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `${tool}_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── pixelate-face ────────────────────────────────────────────────────────
+      case 'pixelate-face': {
+        const pixelSize = parseInt(req.body.pixelSize) || 20;
+        const meta = await sharp(fileBuffer).metadata();
+        const sw = Math.max(1, Math.floor(meta.width / pixelSize));
+        const sh = Math.max(1, Math.floor(meta.height / pixelSize));
+        processedBuffer = await sharp(fileBuffer).resize(sw, sh, { kernel: 'nearest' }).resize(meta.width, meta.height, { kernel: 'nearest' }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `pixelated_face_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── blur-face ────────────────────────────────────────────────────────────
+      case 'blur-face': {
+        const blurAmount = parseFloat(req.body.blurAmount) || 10;
+        processedBuffer = await sharp(fileBuffer).blur(blurAmount).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `blurred_face_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── censor ───────────────────────────────────────────────────────────────
+      case 'censor': {
+        const { x = 0, y = 0, width = 100, height = 100 } = req.body;
+        const meta = await sharp(fileBuffer).metadata();
+        const blurOverlay = await sharp(fileBuffer).extract({ left: Math.max(0,parseInt(x)), top: Math.max(0,parseInt(y)), width: Math.min(parseInt(width),meta.width), height: Math.min(parseInt(height),meta.height) }).blur(20).toBuffer();
+        processedBuffer = await sharp(fileBuffer).composite([{ input: blurOverlay, left: parseInt(x), top: parseInt(y) }]).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `censored_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── freehand-crop ────────────────────────────────────────────────────────
+      case 'freehand-crop': {
+        const meta = await sharp(fileBuffer).metadata();
+        const x = parseInt(req.body.x) || 0, y = parseInt(req.body.y) || 0;
+        const w = parseInt(req.body.width) || Math.min(200, meta.width);
+        const h = parseInt(req.body.height) || Math.min(200, meta.height);
+        const sl = Math.max(0,Math.min(x,meta.width-1)), st = Math.max(0,Math.min(y,meta.height-1));
+        const sw = Math.min(w,meta.width-sl), sh = Math.min(h,meta.height-st);
+        processedBuffer = await sharp(fileBuffer).extract({ left: sl, top: st, width: sw, height: sh }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `cropped_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── split-image ──────────────────────────────────────────────────────────
+      case 'split-image': {
+        const meta = await sharp(fileBuffer).metadata();
+        const parts = Math.max(1, parseInt(req.body.parts) || 2);
+        const direction = req.body.direction || 'horizontal';
+        const rows = Math.max(1, parseInt(req.body.rows) || 2);
+        const cols = Math.max(1, parseInt(req.body.cols) || 2);
+        let pw, ph;
+        if (direction === 'horizontal') { pw = Math.max(1, Math.floor(meta.width/parts)); ph = meta.height; }
+        else if (direction === 'vertical') { pw = meta.width; ph = Math.max(1, Math.floor(meta.height/parts)); }
+        else { pw = Math.max(1, Math.floor(meta.width/cols)); ph = Math.max(1, Math.floor(meta.height/rows)); }
+        processedBuffer = await sharp(fileBuffer).extract({ left: 0, top: 0, width: pw, height: ph }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `split_piece1_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── remove-background ────────────────────────────────────────────────────
+      case 'remove-background':
+        processedBuffer = await sharp(fileBuffer).png().toBuffer();
+        filename = customFilename ? `${customFilename}.png` : `no_bg_${Date.now()}.png`;
+        contentType = 'image/png';
+        break;
+
+      // ── color-picker (returns JSON) ──────────────────────────────────────────
+      case 'color-picker': {
+        const { x = 50, y = 50 } = req.body;
+        const { data, info } = await sharp(fileBuffer).raw().toBuffer({ resolveWithObject: true });
+        const px = Math.min(parseInt(x), info.width - 1), py = Math.min(parseInt(y), info.height - 1);
+        const idx = (py * info.width + px) * info.channels;
+        const r = data[idx], g = data[idx+1], b = data[idx+2];
+        return res.json({ color: { r,g,b }, hex: `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`, position: { x: px, y: py } });
+      }
+
+      // ── convert-dpi / check-dpi ──────────────────────────────────────────────
+      case 'convert-dpi': {
+        const { dpi = 300 } = req.body;
+        processedBuffer = await sharp(fileBuffer).withMetadata({ density: parseInt(dpi) }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `${dpi}dpi_${Date.now()}.jpg`;
+        break;
+      }
+      case 'check-dpi': {
+        const meta = await sharp(fileBuffer).metadata();
+        return res.json({ success: true, dpi: meta.density || 72, width: meta.width, height: meta.height, format: meta.format });
+      }
+
+      // ── generate-signature ───────────────────────────────────────────────────
+      case 'generate-signature': {
+        const { enhance = true, background = 'transparent', style = 'natural', quality = 95, format = 'png', signatureText = '', generateType = 'enhance' } = req.body;
+        if (generateType === 'generate' && signatureText) {
+          const svg = Buffer.from(`<svg width="800" height="200" xmlns="http://www.w3.org/2000/svg"><text x="50" y="130" style="fill:black;font-family:cursive;font-size:100px;">${signatureText}</text></svg>`);
+          processedBuffer = await sharp(svg).png().toBuffer();
+          contentType = 'image/png';
+          filename = customFilename ? `${customFilename}.png` : `sig_${Date.now()}.png`;
+        } else {
+          let proc = sharp(fileBuffer);
+          if (style === 'sharp') proc = proc.sharpen({ sigma: 3, m1: 2, m2: 4 }).modulate({ brightness: 1.2, contrast: 1.4 });
+          else if (style === 'smooth') proc = proc.blur(0.5).modulate({ brightness: 1.1, contrast: 1.1 });
+          else proc = proc.sharpen({ sigma: 2, m1: 1, m2: 3 }).modulate({ brightness: 1.1, contrast: 1.2 });
+          if (format === 'jpg' || format === 'jpeg') {
+            processedBuffer = await proc.flatten({ background: background === 'transparent' ? '#FFFFFF' : background }).jpeg({ quality: parseInt(quality), mozjpeg: true }).toBuffer();
+            contentType = 'image/jpeg'; filename = customFilename ? `${customFilename}.jpg` : `sig_${Date.now()}.jpg`;
+          } else {
+            processedBuffer = background === 'transparent' ? await proc.png({ quality: parseInt(quality) }).toBuffer() : await proc.flatten({ background }).png({ quality: parseInt(quality) }).toBuffer();
+            contentType = 'image/png'; filename = customFilename ? `${customFilename}.png` : `sig_${Date.now()}.png`;
+          }
+        }
+        break;
+      }
+
+      // ── add-name-dob ─────────────────────────────────────────────────────────
+      case 'add-name-dob': {
+        const { name = '', dob = '', position = 'bottom', fontSize = 24 } = req.body;
+        const meta = await sharp(fileBuffer).metadata();
+        const svg = Buffer.from(`<svg width="${meta.width}" height="${meta.height}"><text x="20" y="${position==='bottom'?meta.height-40:40}" font-family="Arial" font-size="${fontSize}" fill="white" stroke="black" stroke-width="1">${name}</text><text x="20" y="${position==='bottom'?meta.height-20:60}" font-family="Arial" font-size="${fontSize}" fill="white" stroke="black" stroke-width="1">${dob}</text></svg>`);
+        processedBuffer = await sharp(fileBuffer).composite([{ input: svg, blend: 'over' }]).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `name_dob_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── add-text ─────────────────────────────────────────────────────────────
+      case 'add-text': {
+        const { text = 'Sample Text', fontSize = 48, color = 'white', position = 'bottom-right' } = req.body;
+        const meta = await sharp(fileBuffer).metadata();
+        const posMap = { 'top-left':{x:20,y:fontSize+20,anchor:'start'}, 'top-right':{x:meta.width-20,y:fontSize+20,anchor:'end'}, center:{x:meta.width/2,y:meta.height/2,anchor:'middle'}, default:{x:meta.width-20,y:meta.height-20,anchor:'end'} };
+        const p = posMap[position] || posMap.default;
+        const svg = Buffer.from(`<svg width="${meta.width}" height="${meta.height}"><text x="${p.x}" y="${p.y}" font-size="${fontSize}" fill="${color}" text-anchor="${p.anchor}" font-family="Arial" font-weight="bold" stroke="black" stroke-width="2">${text}</text></svg>`);
+        processedBuffer = await sharp(fileBuffer).composite([{ input: svg, top: 0, left: 0 }]).jpeg({ quality: 95 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `text_added_${Date.now()}.jpg`;
+        break;
+      }
+
+      // ── ai-face-generator (placeholder) ─────────────────────────────────────
+      case 'ai-face-generator': {
+        const { gender = 'random', age = 'adult' } = req.body;
+        processedBuffer = await sharp({ create: { width: 512, height: 512, channels: 3, background: { r: 200, g: 150, b: 100 } } }).jpeg({ quality: 90 }).toBuffer();
+        filename = customFilename ? `${customFilename}.jpg` : `ai_face_${gender}_${age}_${Date.now()}.jpg`;
+        break;
+      }
+
+      default:
+        return res.status(400).json({ error: `Editor tool '${tool}' not supported` });
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(processedBuffer);
+    setImmediate(() => { processedBuffer = null; if (global.gc) global.gc(); });
+  } catch (error) {
+    console.error(`[EDITORS] ${req.params.tool} error:`, error.message);
+    res.status(500).json({ error: 'Edit failed: ' + error.message });
+  }
+});
+
+export default router;

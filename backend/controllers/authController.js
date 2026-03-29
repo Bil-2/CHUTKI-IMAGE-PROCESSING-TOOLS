@@ -2,13 +2,14 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import { sendPasswordResetEmail } from '../utils/emailService.js';
 
 // Generate JWT token
 const generateToken = (userId) => {
   return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET || 'chutki-secret-key-2024',
-    { expiresIn: '7d' }
+    { userId: userId },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
@@ -263,8 +264,8 @@ export const verifyToken = async (req, res) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'chutki-secret-key-2024');
-    const user = await User.findById(decoded.id);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
 
     if (!user || !user.isActive) {
       return res.status(401).json({
@@ -322,19 +323,26 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate reset token
+    // Generate reset token (expires in 10 minutes)
     const resetToken = user.createPasswordResetToken();
     await user.save();
 
-    // In a real app, you would send an email here
-    // For demo purposes, we'll return the token (NOT recommended in production)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Build the full reset URL — user clicks this link in their email
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
+
+    // Send the email via Resend
+    try {
+      await sendPasswordResetEmail(email, resetToken, resetUrl);
+      console.log(`[AUTH] Password reset email sent to ${email}`);
+    } catch (emailError) {
+      console.error('[AUTH] Failed to send reset email:', emailError.message);
+      // Don't block the response — token is still saved, user can retry
+    }
 
     res.json({
       success: true,
-      message: 'Password reset instructions have been sent to your email',
-      // Remove this in production - only for demo
-      resetToken: resetToken
+      message: 'If an account with that email exists, a password reset link has been sent'
     });
 
   } catch (error) {
@@ -378,9 +386,11 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Update password and clear reset token
+    // Update password and clear reset token fields
     user.password = newPassword;
-    await user.clearPasswordResetToken();
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
 
     // Generate new JWT token
     const jwtToken = generateToken(user._id);

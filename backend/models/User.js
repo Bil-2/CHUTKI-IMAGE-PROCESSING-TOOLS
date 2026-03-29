@@ -50,18 +50,7 @@ const userSchema = new mongoose.Schema({
     default: 'local'
   },
 
-  // User preferences
-  preferences: {
-    theme: {
-      type: String,
-      enum: ['light', 'dark', 'system'],
-      default: 'system'
-    },
-    language: {
-      type: String,
-      default: 'en'
-    }
-  },
+  // User preferences (full definition below)
 
   // Password reset fields
   resetPasswordToken: {

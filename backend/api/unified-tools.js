@@ -22,9 +22,9 @@ router.get('/', (req, res) => {
 });
 
 // PERMANENT FIX: Configure Sharp for better memory management
-sharp.cache(false); // Disable cache to prevent memory leaks
-sharp.concurrency(1); // Process one image at a time to prevent memory spikes
-sharp.simd(true); // Enable SIMD for better performance
+// sharp.cache(false); // Disable cache to prevent memory leaks
+// sharp.concurrency(1); // Process one image at a time to prevent memory spikes
+// sharp.simd(true); // Enable SIMD for better performance
 
 // PERMANENT FIX: Memory cleanup interval (every 5 minutes)
 setInterval(() => {
@@ -90,8 +90,11 @@ const detectAndCropFace = async (buffer) => {
   }
 };
 
-// Unified tools endpoint
-router.post('/:tool', uploadAny, async (req, res) => {
+// Debug middleware before multer
+router.post('/:tool', (req, res, next) => {
+  console.log(`[DEBUG] Request received for /api/tools/${req.params.tool}`);
+  next();
+}, uploadAny, async (req, res) => {
   try {
     const { tool } = req.params;
 

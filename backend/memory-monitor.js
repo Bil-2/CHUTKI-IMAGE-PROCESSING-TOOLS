@@ -1,8 +1,8 @@
 // PERMANENT MEMORY MONITORING SOLUTION
 // This prevents tools from failing after 1 hour
 
-const MEMORY_THRESHOLD = 0.85; // 85% memory usage threshold
-const CHECK_INTERVAL = 60000; // Check every 1 minute
+const MEMORY_THRESHOLD = 0.95; // 95% memory usage threshold
+const CHECK_INTERVAL = 120000; // Check every 2 minutes
 
 function formatBytes(bytes) {
   return (bytes / 1024 / 1024).toFixed(2) + ' MB';
@@ -14,13 +14,15 @@ function checkMemory() {
   const usedHeap = usage.heapUsed;
   const memoryPercent = (usedHeap / totalHeap);
 
-  console.log('[MEMORY-MONITOR]', {
-    heapUsed: formatBytes(usedHeap),
-    heapTotal: formatBytes(totalHeap),
-    percentage: (memoryPercent * 100).toFixed(1) + '%',
-    rss: formatBytes(usage.rss),
-    external: formatBytes(usage.external)
-  });
+  // Only log if using > 80% to reduce terminal noise
+  if (memoryPercent > 0.80) {
+    console.log('[MEMORY-MONITOR]', {
+      heapUsed: formatBytes(usedHeap),
+      heapTotal: formatBytes(totalHeap),
+      percentage: (memoryPercent * 100).toFixed(1) + '%',
+      rss: formatBytes(usage.rss)
+    });
+  }
 
   // If memory usage is high, trigger garbage collection
   if (memoryPercent > MEMORY_THRESHOLD) {
