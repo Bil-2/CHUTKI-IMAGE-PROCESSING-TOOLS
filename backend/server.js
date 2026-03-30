@@ -563,24 +563,26 @@ const gracefulShutdown = (signal) => {
 };
 
 // ================== Start Server ==================
-const startServer = async () => {
+const startServer = () => {
   try {
-    // Connect to database
-    await connectDB();
-
+    // 🚀 ULTRA-FAST COLD START FIX:
+    // Start Express immediately so Render connects to Port 10000 within milliseconds!
+    // This allows the frontend to load instantly while the database connects in the background.
     const server = app.listen(PORT, () => {
-      console.log(`[START] Server running on port ${PORT}`);
+      console.log(`[START] Server instantly bound to port ${PORT} to bypass Render delays`);
       console.log(`[FRONTEND] Frontend URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
       console.log(`[BACKEND] Backend URL: http://localhost:${PORT}`);
       console.log(`[HEALTH] Health check: http://localhost:${PORT}/api/health`);
-      console.log(`[PRIVACY] Privacy Notice: Images are automatically deleted after 30 minutes`);
-
+      
       // Initialize comprehensive cold start prevention system
       const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       initColdStartPrevention(serverUrl);
-      console.log(`[COLD-START] ✅ Multi-layer prevention system activated`);
       console.log(`[COLD-START] 🛡️ 100% uptime protection enabled`);
     });
+
+    // Connect to database completely asynchronously in the background
+    console.log('[CONNECTING] Initiating background database connection...');
+    connectDB().catch(err => console.error('[DB ERROR]', err));
 
     // Graceful shutdown handlers
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -593,4 +595,4 @@ const startServer = async () => {
   }
 };
 
-const server = await startServer();
+const server = startServer();
