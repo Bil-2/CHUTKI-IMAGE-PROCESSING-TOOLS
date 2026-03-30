@@ -21,7 +21,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID.trim(),
     clientSecret: process.env.GOOGLE_CLIENT_SECRET.trim(),
-    callbackURL: (process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/api/auth/google/callback').trim(),
+    callbackURL: process.env.NODE_ENV === 'production' 
+      ? 'https://chutki-backend-bfcn.onrender.com/api/auth/google/callback' 
+      : 'http://localhost:5001/api/auth/google/callback',
     passReqToCallback: false
   }, async (accessToken, refreshToken, profile, done) => {
     try {

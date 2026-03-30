@@ -22,7 +22,7 @@ const connectDB = async () => {
       heartbeatFrequencyMS: 10000,
       retryWrites: true,
       retryReads: true,
-      family: 4, // Force IPv4 to avoid DNS issues on Render
+      // family: 4, // Force IPv4 to avoid DNS issues on Render
     };
 
     // Try different MongoDB connection strings

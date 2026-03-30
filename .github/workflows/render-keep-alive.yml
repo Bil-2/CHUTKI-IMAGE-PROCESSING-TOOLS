@@ -1,0 +1,21 @@
+name: Render Keep-Alive
+
+on:
+  schedule:
+    # Runs every 14 minutes to prevent Render's 15-minute idle timeout
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend
+        run: |
+          echo "Pinging backend to prevent cold start..."
+          curl -sSf https://chutki-backend-bfcn.onrender.com/ping || echo "Backend might be sleeping, but it should be waking up now!"
+          
+      - name: Verify Backend Health
+        run: |
+          echo "Checking if backend is fully awake and healthy..."
+          curl -sSf https://chutki-backend-bfcn.onrender.com/api/health || echo "Health check failed."
