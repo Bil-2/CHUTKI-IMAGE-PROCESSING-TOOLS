@@ -88,7 +88,7 @@ const displayStats = () => {
 
 // Start monitoring
 console.log('╔════════════════════════════════════════════════════════╗');
-console.log('║         🚀 CHUTKI UPTIME MONITOR STARTED 🚀            ║');
+console.log('║         [START] CHUTKI UPTIME MONITOR STARTED [START]            ║');
 console.log('╠════════════════════════════════════════════════════════╣');
 console.log(`║  Target: ${BACKEND_URL.padEnd(47)} ║`);
 console.log(`║  Interval: ${String(CHECK_INTERVAL / 1000 + ' seconds').padEnd(45)} ║`);
@@ -106,13 +106,13 @@ setInterval(displayStats, 5 * 60 * 1000);
 
 // Display stats on exit
 process.on('SIGINT', () => {
-  console.log('\n\n🛑 Monitoring stopped\n');
+  console.log('\n\n[STOP] Monitoring stopped\n');
   displayStats();
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n\n🛑 Monitoring terminated\n');
+  console.log('\n\n[STOP] Monitoring terminated\n');
   displayStats();
   process.exit(0);
 });

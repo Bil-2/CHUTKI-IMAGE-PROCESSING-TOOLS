@@ -54,19 +54,19 @@ toolFiles.forEach((file, index) => {
     hasSubmit: content.includes('onSubmit') || content.includes('handleSubmit'),
     hasResult: content.includes('result') || content.includes('Result'),
     hasDownload: content.includes('download') || content.includes('Download'),
-    status: '✅ Ready'
+    status: '[OK] Ready'
   };
   
   // Check for potential issues
   if (!analysis.hasFileUpload) {
-    analysis.status = '⚠️ No upload';
+    analysis.status = '[WARN] No upload';
   } else if (!analysis.hasSubmit) {
-    analysis.status = '⚠️ No submit';
+    analysis.status = '[WARN] No submit';
   } else if (!analysis.hasResult) {
-    analysis.status = '⚠️ No result';
+    analysis.status = '[WARN] No result';
   }
   
-  if (analysis.status === '✅ Ready') {
+  if (analysis.status === '[OK] Ready') {
     results.accessible++;
   }
   
@@ -78,7 +78,7 @@ toolFiles.forEach((file, index) => {
   }
 });
 
-console.log(`\n✅ Verification complete!\n`);
+console.log(`\n[OK] Verification complete!\n`);
 
 // Generate report
 const report = `# Tool Accessibility Verification Report
@@ -90,7 +90,7 @@ Generated: ${new Date().toISOString()}
 - **Accessible:** ${results.accessible} (${((results.accessible/results.total)*100).toFixed(1)}%)
 - **Has Component:** ${results.total} (100%)
 
-## Status: ${results.accessible === results.total ? '✅ ALL TOOLS ACCESSIBLE' : '⚠️ SOME TOOLS NEED ATTENTION'}
+## Status: ${results.accessible === results.total ? '[OK] ALL TOOLS ACCESSIBLE' : '[WARN] SOME TOOLS NEED ATTENTION'}
 
 ---
 
@@ -102,10 +102,10 @@ ${results.tools.map((t, i) => `
 - **File:** \`${t.file}\`
 - **Route:** \`${t.route}\`
 - **URL:** \`${FRONTEND_URL}${t.route}\`
-- **File Upload:** ${t.hasFileUpload ? '✅' : '❌'}
-- **Submit Handler:** ${t.hasSubmit ? '✅' : '❌'}
-- **Result Display:** ${t.hasResult ? '✅' : '❌'}
-- **Download:** ${t.hasDownload ? '✅' : '❌'}
+- **File Upload:** ${t.hasFileUpload ? '[OK]' : '[ERROR]'}
+- **Submit Handler:** ${t.hasSubmit ? '[OK]' : '[ERROR]'}
+- **Result Display:** ${t.hasResult ? '[OK]' : '[ERROR]'}
+- **Download:** ${t.hasDownload ? '[OK]' : '[ERROR]'}
 `).join('\n')}
 
 ---
@@ -140,27 +140,27 @@ Check backend status: ${BACKEND_URL}/api/health
 
 // Save report
 fs.writeFileSync('TOOL_ACCESSIBILITY_REPORT.md', report);
-console.log('📄 Report saved to: TOOL_ACCESSIBILITY_REPORT.md\n');
+console.log('[FILE] Report saved to: TOOL_ACCESSIBILITY_REPORT.md\n');
 
 // Console summary
 console.log('='.repeat(60));
 console.log('VERIFICATION SUMMARY');
 console.log('='.repeat(60));
 console.log(`Total Tools: ${results.total}`);
-console.log(`✅ Accessible: ${results.accessible}`);
-console.log(`⚠️ Need Attention: ${results.total - results.accessible}`);
+console.log(`[OK] Accessible: ${results.accessible}`);
+console.log(`[WARN] Need Attention: ${results.total - results.accessible}`);
 console.log('='.repeat(60));
 
 // List tools that need attention
-const needsAttention = results.tools.filter(t => t.status !== '✅ Ready');
+const needsAttention = results.tools.filter(t => t.status !== '[OK] Ready');
 if (needsAttention.length > 0) {
-  console.log('\n⚠️ Tools needing attention:');
+  console.log('\n[WARN] Tools needing attention:');
   needsAttention.forEach(t => {
     console.log(`  - ${t.name}: ${t.status}`);
   });
 }
 
-console.log('\n✅ All tool components exist and are configured!');
-console.log(`\n🌐 Frontend: ${FRONTEND_URL}`);
-console.log(`🔧 Backend: ${BACKEND_URL}`);
-console.log(`\n📝 Open TOOL_ACCESSIBILITY_REPORT.md for detailed URLs\n`);
+console.log('\n[OK] All tool components exist and are configured!');
+console.log(`\n[NET] Frontend: ${FRONTEND_URL}`);
+console.log(`[CONFIG] Backend: ${BACKEND_URL}`);
+console.log(`\n[LOG] Open TOOL_ACCESSIBILITY_REPORT.md for detailed URLs\n`);

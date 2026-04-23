@@ -21,7 +21,7 @@ const detectAndCropFace = async (buffer) => {
   return sharp(buffer).extract({ left, top, width: size, height: size });
 };
 
-router.post('/:tool', upload.any(), async (req, res) => {
+router.post('/:tool', async (req, res, next) => {
   try {
     const { tool } = req.params;
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
@@ -202,26 +202,64 @@ router.post('/:tool', upload.any(), async (req, res) => {
 
       // ── split-image ──────────────────────────────────────────────────────────
       case 'split-image': {
+        const JSZip = (await import('jszip')).default;
         const meta = await sharp(fileBuffer).metadata();
-        const parts = Math.max(1, parseInt(req.body.parts) || 2);
-        const direction = req.body.direction || 'horizontal';
+        const direction = req.body.direction || 'grid';
         const rows = Math.max(1, parseInt(req.body.rows) || 2);
         const cols = Math.max(1, parseInt(req.body.cols) || 2);
-        let pw, ph;
-        if (direction === 'horizontal') { pw = Math.max(1, Math.floor(meta.width/parts)); ph = meta.height; }
-        else if (direction === 'vertical') { pw = meta.width; ph = Math.max(1, Math.floor(meta.height/parts)); }
-        else { pw = Math.max(1, Math.floor(meta.width/cols)); ph = Math.max(1, Math.floor(meta.height/rows)); }
-        processedBuffer = await sharp(fileBuffer).extract({ left: 0, top: 0, width: pw, height: ph }).jpeg({ quality: 90 }).toBuffer();
-        filename = customFilename ? `${customFilename}.jpg` : `split_piece1_${Date.now()}.jpg`;
+        const parts = Math.max(1, parseInt(req.body.parts) || 2);
+        const pieces = [];
+        if (direction === 'horizontal') {
+          const pieceW = Math.floor(meta.width / parts);
+          for (let i = 0; i < parts; i++) {
+            const left = i * pieceW;
+            const w = i === parts - 1 ? meta.width - left : pieceW;
+            if (w > 0) pieces.push({ left, top: 0, width: w, height: meta.height, name: `piece_${i+1}.jpg` });
+          }
+        } else if (direction === 'vertical') {
+          const pieceH = Math.floor(meta.height / parts);
+          for (let i = 0; i < parts; i++) {
+            const top = i * pieceH;
+            const h = i === parts - 1 ? meta.height - top : pieceH;
+            if (h > 0) pieces.push({ left: 0, top, width: meta.width, height: h, name: `piece_${i+1}.jpg` });
+          }
+        } else {
+          const pieceW = Math.floor(meta.width / cols);
+          const pieceH = Math.floor(meta.height / rows);
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const left = c * pieceW, top = r * pieceH;
+              const w = c === cols - 1 ? meta.width - left : pieceW;
+              const h = r === rows - 1 ? meta.height - top : pieceH;
+              if (w > 0 && h > 0) pieces.push({ left, top, width: w, height: h, name: `piece_r${r+1}_c${c+1}.jpg` });
+            }
+          }
+        }
+        if (pieces.length === 1) {
+          const p = pieces[0];
+          processedBuffer = await sharp(fileBuffer).extract({ left: p.left, top: p.top, width: p.width, height: p.height }).jpeg({ quality: 90 }).toBuffer();
+          filename = `split_piece1_${Date.now()}.jpg`;
+        } else {
+          const zip = new JSZip();
+          for (const piece of pieces) {
+            const buf = await sharp(fileBuffer).extract({ left: piece.left, top: piece.top, width: piece.width, height: piece.height }).jpeg({ quality: 90 }).toBuffer();
+            zip.file(piece.name, buf);
+          }
+          const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+          res.setHeader('Content-Type', 'application/zip');
+          res.setHeader('Content-Disposition', `attachment; filename="split_${rows}x${cols}_${Date.now()}.zip"`);
+          res.send(zipBuffer);
+          return;
+        }
         break;
       }
 
+
       // ── remove-background ────────────────────────────────────────────────────
       case 'remove-background':
-        processedBuffer = await sharp(fileBuffer).png().toBuffer();
-        filename = customFilename ? `${customFilename}.png` : `no_bg_${Date.now()}.png`;
-        contentType = 'image/png';
-        break;
+        return res.status(400).json({
+          error: 'Background removal requires an AI model. Please use the online version at chutki-image-processing-tools.vercel.app for AI background removal.'
+        });
 
       // ── color-picker (returns JSON) ──────────────────────────────────────────
       case 'color-picker': {

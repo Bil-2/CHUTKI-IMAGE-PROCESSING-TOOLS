@@ -1,6 +1,6 @@
 // backend/server.js
 
-// ⚡ CRITICAL: Catch ALL unhandled promise rejections (e.g. MongoDB DNS errors)
+// [FAST] CRITICAL: Catch ALL unhandled promise rejections (e.g. MongoDB DNS errors)
 // so the server process never crashes silently on Render
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[UNHANDLED REJECTION] Caught:', reason?.message || reason);
@@ -69,13 +69,13 @@ import coldStartStatusRoutes from "./api/cold-start-status.js";
 const { errors, warnings } = validateEnvironment();
 
 if (errors.length > 0) {
-  console.error('❌ Environment validation errors:');
+  console.error('[ERROR] Environment validation errors:');
   errors.forEach(error => console.error(`  - ${error}`));
   process.exit(1);
 }
 
 if (warnings.length > 0) {
-  console.warn('⚠️  Environment warnings:');
+  console.warn('[WARN]  Environment warnings:');
   warnings.forEach(warning => console.warn(`  - ${warning}`));
 }
 
@@ -101,17 +101,23 @@ app.use(helmet({
   },
 }));
 
-// Compression middleware with optimization
+// Compression middleware — skip binary files (images, PDFs, ZIPs)
+// Gzipping images breaks downloads: blob.size shows compressed size, not actual image size
 app.use(compression({
   level: 6,
   threshold: 1024,
   filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
+    if (req.headers['x-no-compression']) return false;
+    const ct = res.getHeader('Content-Type') || '';
+    // Never compress already-compressed binary formats
+    if (ct.startsWith('image/') || ct === 'application/pdf' ||
+        ct === 'application/zip' || ct === 'application/octet-stream') {
       return false;
     }
     return compression.filter(req, res);
   }
 }));
+
 
 // Performance optimization headers
 app.use((req, res, next) => {
@@ -272,7 +278,7 @@ const cleanupOldFiles = () => {
       console.log(`[CLEANUP] Cleaned up ${deletedCount} old files`);
     }
   } catch (error) {
-    console.error('🚨 Cleanup error:', error.message);
+    console.error('[ALERT] Cleanup error:', error.message);
   }
 };
 
@@ -309,6 +315,9 @@ app.use('/api/chatgpt', chatgptRoutes);
 app.use('/api/ai', aiChatRoutes);
 
 // ── Modular tool category routers (ORDER MATTERS: specific before generic) ──
+// Parse multipart forms ONCE for all tool routes to prevent stream-draining hangs
+app.use('/api/tools', upload.any());
+
 // Compression tools: compress-Xkb, reduce-size-kb, image-compressor, etc.
 app.use('/api/tools', compressorsRoutes);
 // Conversion tools: heic-to-jpg, image-to-pdf, pdf-to-jpg, OCR, etc.
@@ -487,7 +496,7 @@ app.get("/api/health", (req, res) => {
 
 // ================== Error Handling ==================
 app.use((err, req, res, next) => {
-  console.error(`🚨 Error [${req.requestId}]:`, err.stack);
+  console.error(`[ALERT] Error [${req.requestId}]:`, err.stack);
 
   // Multer errors
   if (err instanceof multer.MulterError) {
@@ -538,7 +547,7 @@ app.use("*", (req, res) => {
 
 // ================== Graceful Shutdown ==================
 const gracefulShutdown = (signal) => {
-  console.log(`\n📦 Received ${signal}. Starting graceful shutdown...`);
+  console.log(`\n[PKG] Received ${signal}. Starting graceful shutdown...`);
 
   // Close server
   server.close(() => {
@@ -547,7 +556,7 @@ const gracefulShutdown = (signal) => {
     // Close database connection
     if (mongoose.connection.readyState === 1) {
       mongoose.connection.close(() => {
-        console.log('📦 MongoDB connection closed');
+        console.log('[PKG] MongoDB connection closed');
         process.exit(0);
       });
     } else {
@@ -557,7 +566,7 @@ const gracefulShutdown = (signal) => {
 
   // Force close after 10 seconds
   setTimeout(() => {
-    console.error('⚠️  Could not close connections in time, forcefully shutting down');
+    console.error('[WARN]  Could not close connections in time, forcefully shutting down');
     process.exit(1);
   }, 10000);
 };
@@ -565,7 +574,7 @@ const gracefulShutdown = (signal) => {
 // ================== Start Server ==================
 const startServer = () => {
   try {
-    // 🚀 ULTRA-FAST COLD START FIX:
+    // [START] ULTRA-FAST COLD START FIX:
     // Start Express immediately so Render connects to Port 10000 within milliseconds!
     // This allows the frontend to load instantly while the database connects in the background.
     const server = app.listen(PORT, () => {
@@ -577,7 +586,7 @@ const startServer = () => {
       // Initialize comprehensive cold start prevention system
       const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       initColdStartPrevention(serverUrl);
-      console.log(`[COLD-START] 🛡️ 100% uptime protection enabled`);
+      console.log(`[COLD-START] [SHIELD] 100% uptime protection enabled`);
     });
 
     // Connect to database completely asynchronously in the background
@@ -590,7 +599,7 @@ const startServer = () => {
 
     return server;
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error("[ERROR] Failed to start server:", error);
     process.exit(1);
   }
 };

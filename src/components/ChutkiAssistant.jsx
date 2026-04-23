@@ -244,10 +244,10 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
   // Optimized typewriter effect with smoother performance
   useEffect(() => {
     const introMessages = [
-      "Hello!",
-      "I'm Chutki Assistant",
-      "How can I help you today ?",
-      "ChatGPT Powered Assistant"
+    "Hello!",
+    "I'm Chutki Assistant",
+    "What's needed today?",
+    "AI Powered Assistant"
     ];
 
     let animationId;

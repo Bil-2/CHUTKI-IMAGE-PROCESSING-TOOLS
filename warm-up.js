@@ -15,7 +15,7 @@ const endpoints = [
 
 const warmUpEndpoint = async (endpoint) => {
   try {
-    console.log(`🔥 Warming up: ${endpoint.path} [${endpoint.priority}]`);
+    console.log(`[HOT] Warming up: ${endpoint.path} [${endpoint.priority}]`);
     const startTime = Date.now();
     
     const controller = new AbortController();
@@ -37,10 +37,10 @@ const warmUpEndpoint = async (endpoint) => {
     const responseTime = endTime - startTime;
     
     if (response.ok) {
-      const statusIcon = responseTime < 1000 ? '🚀' : responseTime < 3000 ? '✅' : '⚠️';
+      const statusIcon = responseTime < 1000 ? '[START]' : responseTime < 3000 ? '[OK]' : '[WARN]';
       console.log(`${statusIcon} ${endpoint.path} - ${response.status} (${responseTime}ms)`);
     } else {
-      console.log(`⚠️ ${endpoint.path} - ${response.status} (${responseTime}ms)`);
+      console.log(`[WARN] ${endpoint.path} - ${response.status} (${responseTime}ms)`);
     }
     
     return { 
@@ -51,7 +51,7 @@ const warmUpEndpoint = async (endpoint) => {
       priority: endpoint.priority
     };
   } catch (error) {
-    console.log(`❌ ${endpoint.path} - Error: ${error.message}`);
+    console.log(`[ERROR] ${endpoint.path} - Error: ${error.message}`);
     return { 
       endpoint: endpoint.path, 
       error: error.message, 
@@ -63,10 +63,10 @@ const warmUpEndpoint = async (endpoint) => {
 
 const warmUpServer = async () => {
   console.log(`╔${'═'.repeat(60)}╗`);
-  console.log(`║  🚀 CHUTKI Server Warm-up v3 - Cold Start Eliminator      ║`);
+  console.log(`║  [START] CHUTKI Server Warm-up v3 - Cold Start Eliminator      ║`);
   console.log(`╠${'═'.repeat(60)}╣`);
-  console.log(`║  📡 Target: ${BACKEND_URL.padEnd(42)} ║`);
-  console.log(`║  🎯 Endpoints: ${endpoints.length} (prioritized)                          ║`);
+  console.log(`║  [PING] Target: ${BACKEND_URL.padEnd(42)} ║`);
+  console.log(`║  [TARGET] Endpoints: ${endpoints.length} (prioritized)                          ║`);
   console.log(`╚${'═'.repeat(60)}╝\n`);
   
   const results = [];
@@ -91,14 +91,14 @@ const warmUpServer = async () => {
   
   // Summary
   console.log(`\n${'═'.repeat(62)}`);
-  console.log('📊 Warm-up Summary:');
+  console.log('[STATS] Warm-up Summary:');
   console.log(`${'═'.repeat(62)}`);
   
   const successful = results.filter(r => r.success).length;
   const total = results.length;
   const successRate = Math.round((successful / total) * 100);
   
-  console.log(`✅ Successful: ${successful}/${total} (${successRate}%)`);
+  console.log(`[OK] Successful: ${successful}/${total} (${successRate}%)`);
   
   // Calculate average response time for successful requests
   const successfulResults = results.filter(r => r.success && r.responseTime);
@@ -107,24 +107,24 @@ const warmUpServer = async () => {
     const minResponseTime = Math.min(...successfulResults.map(r => r.responseTime));
     const maxResponseTime = Math.max(...successfulResults.map(r => r.responseTime));
     
-    console.log(`⏱️  Average response time: ${Math.round(avgResponseTime)}ms`);
-    console.log(`⚡ Fastest: ${minResponseTime}ms | Slowest: ${maxResponseTime}ms`);
+    console.log(`[TIME]  Average response time: ${Math.round(avgResponseTime)}ms`);
+    console.log(`[FAST] Fastest: ${minResponseTime}ms | Slowest: ${maxResponseTime}ms`);
   }
   
   // Status by priority
   const criticalSuccess = results.filter(r => r.priority === 'critical' && r.success).length;
   const criticalTotal = results.filter(r => r.priority === 'critical').length;
   
-  console.log(`\n🎯 Critical endpoints: ${criticalSuccess}/${criticalTotal} successful`);
+  console.log(`\n[TARGET] Critical endpoints: ${criticalSuccess}/${criticalTotal} successful`);
   
   if (successful === total) {
-    console.log('\n🎉 Server is fully warmed up and ready!');
-    console.log('✨ Cold start eliminated - all systems operational');
+    console.log('\n[DONE] Server is fully warmed up and ready!');
+    console.log('[NEW] Cold start eliminated - all systems operational');
   } else if (criticalSuccess === criticalTotal) {
-    console.log('\n✅ Critical systems warmed up successfully');
-    console.log('⚠️  Some non-critical endpoints need attention');
+    console.log('\n[OK] Critical systems warmed up successfully');
+    console.log('[WARN]  Some non-critical endpoints need attention');
   } else {
-    console.log('\n⚠️  Warm-up incomplete - some critical endpoints failed');
+    console.log('\n[WARN]  Warm-up incomplete - some critical endpoints failed');
   }
   
   console.log(`${'═'.repeat(62)}\n`);
@@ -143,7 +143,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       process.exit(result.success ? 0 : 1);
     })
     .catch(error => {
-      console.error('❌ Warm-up failed:', error);
+      console.error('[ERROR] Warm-up failed:', error);
       process.exit(1);
     });
 }

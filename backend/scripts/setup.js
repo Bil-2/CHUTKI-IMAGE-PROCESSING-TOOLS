@@ -15,37 +15,37 @@ const envExamplePath = path.join(__dirname, '..', 'env.example');
 
 if (!fs.existsSync(envPath)) {
   if (fs.existsSync(envExamplePath)) {
-    console.log('📝 Creating .env file from template...');
+    console.log('[LOG] Creating .env file from template...');
     fs.copyFileSync(envExamplePath, envPath);
-    console.log('✅ .env file created successfully!');
-    console.log('⚠️  Please update the .env file with your actual configuration values.\n');
+    console.log('[OK] .env file created successfully!');
+    console.log('[WARN]  Please update the .env file with your actual configuration values.\n');
   } else {
-    console.log('❌ env.example file not found. Please create a .env file manually.');
+    console.log('[ERROR] env.example file not found. Please create a .env file manually.');
   }
 } else {
-  console.log('✅ .env file already exists.\n');
+  console.log('[OK] .env file already exists.\n');
 }
 
 // Create uploads directory if it doesn't exist
 const uploadsPath = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsPath)) {
-  console.log('📁 Creating uploads directory...');
+  console.log('[DIR] Creating uploads directory...');
   fs.mkdirSync(uploadsPath, { recursive: true });
-  console.log('✅ Uploads directory created successfully!\n');
+  console.log('[OK] Uploads directory created successfully!\n');
 } else {
-  console.log('✅ Uploads directory already exists.\n');
+  console.log('[OK] Uploads directory already exists.\n');
 }
 
 // Check if node_modules exists
 const nodeModulesPath = path.join(__dirname, '..', 'node_modules');
 if (!fs.existsSync(nodeModulesPath)) {
-  console.log('📦 Installing dependencies...');
+  console.log('[PKG] Installing dependencies...');
   console.log('Run: npm install\n');
 } else {
-  console.log('✅ Dependencies are installed.\n');
+  console.log('[OK] Dependencies are installed.\n');
 }
 
-console.log('🎉 Setup complete!');
+console.log('[DONE] Setup complete!');
 console.log('\nNext steps:');
 console.log('1. Update your .env file with your configuration');
 console.log('2. Run: npm run dev');

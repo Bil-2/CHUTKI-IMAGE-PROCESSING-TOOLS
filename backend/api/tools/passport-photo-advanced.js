@@ -37,10 +37,10 @@ const detectAndCropFace = async (buffer) => {
   }
 };
 
-// Advanced Passport Photo Maker endpoint
-router.post('/', upload.single('file'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    if (!req.file) {
+    const fileObj = req.files?.[0] || req.file;
+    if (!fileObj) {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
@@ -96,7 +96,7 @@ router.post('/', upload.single('file'), async (req, res) => {
       backgroundValue = reqs.backgroundColor;
     }
 
-    let processor = sharp(req.file.buffer);
+    let processor = sharp(fileObj.buffer);
 
     // Apply enhancement if requested
     if (enhance === 'true' || enhance === true) {
@@ -109,11 +109,11 @@ router.post('/', upload.single('file'), async (req, res) => {
     let faceProcessor;
     try {
       // Try to use more advanced face detection
-      faceProcessor = await detectAndCropFace(req.file.buffer);
+      faceProcessor = await detectAndCropFace(fileObj.buffer);
     } catch (faceError) {
       // Fallback to basic processing
       console.log('Advanced face detection failed, using basic processing');
-      faceProcessor = sharp(req.file.buffer);
+      faceProcessor = sharp(fileObj.buffer);
     }
 
     // Resize to passport photo dimensions
@@ -133,7 +133,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     if (complianceCheck) {
       try {
-        const metadata = await sharp(req.file.buffer).metadata();
+        const metadata = await sharp(fileObj.buffer).metadata();
 
         // Resolution check
         if (metadata.width < 600 || metadata.height < 600) {

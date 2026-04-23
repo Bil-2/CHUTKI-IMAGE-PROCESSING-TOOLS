@@ -10,7 +10,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => { file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Only images')); }
 });
 
-router.post('/:tool', upload.any(), async (req, res) => {
+router.post('/:tool', async (req, res, next) => {
   try {
     const { tool } = req.params;
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
@@ -177,7 +177,7 @@ router.post('/:tool', upload.any(), async (req, res) => {
         filename=customFilename?`${customFilename}.jpg`:`joined_${Date.now()}.jpg`; break;
       }
       default:
-        return res.status(400).json({ error: `Resize tool '${tool}' not supported` });
+        return next();
     }
 
     res.setHeader('Content-Type', contentType);

@@ -140,7 +140,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     }
   );
 
-  console.log('✅ Google OAuth routes initialized successfully');
+  console.log('[OK] Google OAuth routes initialized successfully');
 } else {
   router.get('/google', (req, res) => {
     res.status(503).json({ success: false, message: 'Google OAuth not configured', error: 'OAUTH_DISABLED' });
@@ -148,7 +148,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   router.get('/google/callback', (req, res) => {
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_disabled`);
   });
-  console.log('📝 Google OAuth routes disabled — GOOGLE_CLIENT_ID/SECRET not set');
+  console.log('[LOG] Google OAuth routes disabled — GOOGLE_CLIENT_ID/SECRET not set');
 }
 
 export default router;

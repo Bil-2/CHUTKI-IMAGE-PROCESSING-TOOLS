@@ -71,22 +71,22 @@ class ColdStartPrevention extends EventEmitter {
         this.stats.successfulPings++;
         this.stats.lastSuccessTime = new Date();
 
-        console.log(`[COLD-START] ✅ Self-ping successful [${source}] (${responseTime}ms)`);
+        console.log(`[COLD-START] [OK] Self-ping successful [${source}] (${responseTime}ms)`);
         this.emit('ping:success', { source, responseTime });
 
         // If response is slow OR this is the first successful ping, trigger warm-up
         if (responseTime > 3000 || this.stats.successfulPings === 1) {
-          console.log(`[COLD-START] ${responseTime > 3000 ? '⚠️ Slow response' : '🔥 First ping'}, triggering warm-up...`);
+          console.log(`[COLD-START] ${responseTime > 3000 ? '[WARN] Slow response' : '[HOT] First ping'}, triggering warm-up...`);
           this.warmUpEndpoints();
         }
       } else {
         this.stats.failedPings++;
-        console.log(`[COLD-START] ⚠️ Self-ping returned ${response.status} [${source}]`);
+        console.log(`[COLD-START] [WARN] Self-ping returned ${response.status} [${source}]`);
         this.emit('ping:warning', { source, status: response.status });
       }
     } catch (error) {
       this.stats.failedPings++;
-      console.log(`[COLD-START] ❌ Self-ping failed [${source}]: ${error.message}`);
+      console.log(`[COLD-START] [ERROR] Self-ping failed [${source}]: ${error.message}`);
       this.emit('ping:error', { source, error: error.message });
     }
   }
@@ -113,7 +113,7 @@ class ColdStartPrevention extends EventEmitter {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log('[COLD-START] 🔥 Warm-up completed');
+    console.log('[COLD-START] [HOT] Warm-up completed');
   }
 
   // Activity monitoring - track incoming requests
@@ -168,7 +168,7 @@ export const initColdStartPrevention = (serverUrl) => {
     instance.startSelfPing();
     instance.trackActivity();
 
-    console.log('[COLD-START] ✅ Prevention system initialized');
+    console.log('[COLD-START] [OK] Prevention system initialized');
   }
   return instance;
 };

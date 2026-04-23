@@ -41,7 +41,7 @@ const pingServer = async () => {
   totalPings++;
   const timestamp = new Date().toISOString();
   
-  console.log(`\n🔄 [${timestamp}] Keep-Alive Ping #${totalPings}`);
+  console.log(`\n[REFRESH] [${timestamp}] Keep-Alive Ping #${totalPings}`);
   
   // Ping multiple endpoints for redundancy
   const endpoints = [
@@ -57,15 +57,15 @@ const pingServer = async () => {
     
     if (result.success) {
       anySuccess = true;
-      console.log(`  ✅ ${endpoint.name}: ${result.status} (${result.responseTime}ms)`);
+      console.log(`  [OK] ${endpoint.name}: ${result.status} (${result.responseTime}ms)`);
       
       // Warm up if slow
       if (result.responseTime > 3000) {
-        console.log(`  ⚠️ Slow response, triggering warm-up...`);
+        console.log(`  [WARN] Slow response, triggering warm-up...`);
         warmUpEndpoints();
       }
     } else {
-      console.log(`  ❌ ${endpoint.name}: ${result.error || result.status}`);
+      console.log(`  [ERROR] ${endpoint.name}: ${result.error || result.status}`);
     }
     
     // Small delay between pings
@@ -75,13 +75,13 @@ const pingServer = async () => {
   if (anySuccess) {
     consecutiveFailures = 0;
     successfulPings++;
-    console.log(`✅ Keep-alive successful (${successfulPings}/${totalPings} success rate: ${Math.round(successfulPings/totalPings*100)}%)`);
+    console.log(`[OK] Keep-alive successful (${successfulPings}/${totalPings} success rate: ${Math.round(successfulPings/totalPings*100)}%)`);
   } else {
     consecutiveFailures++;
-    console.log(`❌ All endpoints failed (${consecutiveFailures} consecutive failures)`);
+    console.log(`[ERROR] All endpoints failed (${consecutiveFailures} consecutive failures)`);
     
     if (consecutiveFailures >= MAX_FAILURES) {
-      console.log(`🚨 ALERT: ${MAX_FAILURES} consecutive failures - server may be down!`);
+      console.log(`[ALERT] ALERT: ${MAX_FAILURES} consecutive failures - server may be down!`);
     }
   }
 };
@@ -92,7 +92,7 @@ const warmUpEndpoints = async () => {
     '/api/profile/me'
   ];
   
-  console.log(`  🔥 Warming up ${warmUpTargets.length} endpoints...`);
+  console.log(`  [HOT] Warming up ${warmUpTargets.length} endpoints...`);
   
   for (const endpoint of warmUpTargets) {
     pingEndpoint(endpoint, 8000).catch(() => {});
@@ -102,16 +102,16 @@ const warmUpEndpoints = async () => {
 
 // Start service
 console.log(`╔${'═'.repeat(60)}╗`);
-console.log(`║  🚀 CHUTKI Keep-Alive Service v3 - Maximum Protection     ║`);
+console.log(`║  [START] CHUTKI Keep-Alive Service v3 - Maximum Protection     ║`);
 console.log(`╠${'═'.repeat(60)}╣`);
-console.log(`║  📡 Target: ${BACKEND_URL.padEnd(42)} ║`);
+console.log(`║  [PING] Target: ${BACKEND_URL.padEnd(42)} ║`);
 console.log(`║  ⏰ Intervals: 5min, 7min, 13min (multi-layer)            ║`);
-console.log(`║  🛡️  Protection: 100% uptime guarantee                     ║`);
+console.log(`║  [SHIELD]  Protection: 100% uptime guarantee                     ║`);
 console.log(`╚${'═'.repeat(60)}╝`);
 
 // Initial ping after 30 seconds
 setTimeout(() => {
-  console.log(`\n🔄 Starting initial ping...`);
+  console.log(`\n[REFRESH] Starting initial ping...`);
   pingServer();
 }, 30000);
 
@@ -122,7 +122,7 @@ PING_INTERVALS.forEach((interval, index) => {
     pingServer();
   }, interval);
   
-  console.log(`✅ Layer ${index + 1} initialized: ${interval / 1000 / 60} minutes`);
+  console.log(`[OK] Layer ${index + 1} initialized: ${interval / 1000 / 60} minutes`);
 });
 
 // Health report every hour
@@ -131,7 +131,7 @@ setInterval(() => {
   const hours = Math.floor(uptime / 3600);
   const minutes = Math.floor((uptime % 3600) / 60);
   
-  console.log(`\n📊 Keep-Alive Health Report:`);
+  console.log(`\n[STATS] Keep-Alive Health Report:`);
   console.log(`   Uptime: ${hours}h ${minutes}m`);
   console.log(`   Total Pings: ${totalPings}`);
   console.log(`   Successful: ${successfulPings}`);
@@ -141,11 +141,11 @@ setInterval(() => {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Keep-Alive service stopped gracefully');
+  console.log('\n[STOP] Keep-Alive service stopped gracefully');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Keep-Alive service terminated');
+  console.log('\n[STOP] Keep-Alive service terminated');
   process.exit(0);
 });

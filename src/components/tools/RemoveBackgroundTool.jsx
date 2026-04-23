@@ -10,34 +10,14 @@ const RemoveBackgroundTool = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [formData, setFormData] = useState({});
-
-  const handleFileChange = (selectedFile) => {
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
-      reader.readAsDataURL(selectedFile);
-    } else {
-      setFile(null);
-      setPreview(null);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      toast.error('Please select an image');
-      return;
-    }
+    if (!file) { toast.error('Please select an image'); return; }
 
     setLoading(true);
     const data = new FormData();
     data.append('file', file);
-    
-    Object.keys(formData).forEach(key => {
-      if (formData[key]) data.append(key, formData[key]);
-    });
 
     try {
       const token = localStorage.getItem('token');
@@ -51,10 +31,11 @@ const RemoveBackgroundTool = () => {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         setResult(url);
-        toast.success('Image processed successfully!');
+        toast.success('Background removed successfully!');
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Processing failed');
+        // Backend returns 400 with helpful message for this tool
+        toast.error(error.error || error.message || 'Processing failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -68,7 +49,7 @@ const RemoveBackgroundTool = () => {
     if (result) {
       const a = document.createElement('a');
       a.href = result;
-      a.download = 'remove-background-' + Date.now() + '.jpg';
+      a.download = `removed_bg_${Date.now()}.png`;
       a.click();
     }
   };
@@ -88,13 +69,35 @@ const RemoveBackgroundTool = () => {
             Back to Dashboard
           </button>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Remove Background</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Process your images with professional quality</p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">AI-powered background removal</p>
           <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
-            Transform
+            AI Tool
           </span>
         </div>
 
-        {/* Main Content */}
+        {/* AI Notice Banner */}
+        <div className="mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-6 flex items-start gap-4">
+          <div className="flex-shrink-0 w-10 h-10 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-amber-600 dark:text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-1">AI Model Required</h3>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+              Background removal requires an AI model that runs on our cloud servers. This feature is fully available on the online version.
+            </p>
+            <a
+              href="https://chutki-image-processing-tools.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Use Online Version →
+            </a>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upload Section */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
@@ -104,32 +107,25 @@ const RemoveBackgroundTool = () => {
               </svg>
               Upload Image
             </h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
-                />
-              </div>
+              <FileUploadZone
+                file={file}
+                onFileSelect={(selectedFile) => {
+                  if (selectedFile) {
+                    setFile(selectedFile);
+                    const reader = new FileReader();
+                    reader.onloadend = () => setPreview(reader.result);
+                    reader.readAsDataURL(selectedFile);
+                  } else {
+                    setFile(null);
+                    setPreview(null);
+                  }
+                }}
+                preview={preview}
+                accept="image/*"
+              />
 
-              {/* Preview */}
-              {preview && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
-                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
-                </div>
-              )}
-
-              
-
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading || !file}
@@ -141,9 +137,9 @@ const RemoveBackgroundTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Processing...
+                    Removing Background...
                   </span>
-                ) : 'Process Image'}
+                ) : 'Remove Background'}
               </button>
             </form>
           </div>
@@ -156,10 +152,10 @@ const RemoveBackgroundTool = () => {
               </svg>
               Result
             </h2>
-            
+
             {result ? (
               <div className="space-y-6">
-                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-checkered border-2 border-gray-200 dark:border-gray-600" />
                 <button
                   onClick={handleDownload}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
@@ -167,7 +163,7 @@ const RemoveBackgroundTool = () => {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Image
+                  Download PNG (Transparent)
                 </button>
               </div>
             ) : (
@@ -178,15 +174,15 @@ const RemoveBackgroundTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing your image...</p>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing with AI...</p>
                   </>
                 ) : (
                   <>
                     <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 text-center text-base px-8">
-                      Upload and process a photo to see results
+                      Upload an image — background will be removed using AI
                     </p>
                   </>
                 )}
@@ -200,3 +196,4 @@ const RemoveBackgroundTool = () => {
 };
 
 export default RemoveBackgroundTool;
+

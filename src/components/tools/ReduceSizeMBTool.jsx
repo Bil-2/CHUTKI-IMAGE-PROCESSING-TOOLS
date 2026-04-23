@@ -10,33 +10,25 @@ const ReduceSizeMBTool = () => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [fileInfo, setFileInfo] = useState(null);
   const [formData, setFormData] = useState({
-    targetMB: ''
+    targetMB: '',
+    format: 'jpeg'
   });
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
-      reader.readAsDataURL(selectedFile);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      toast.error('Please select an image');
+    if (!file) { toast.error('Please select an image'); return; }
+    if (!formData.targetMB || parseFloat(formData.targetMB) <= 0) {
+      toast.error('Please enter a valid target size in MB');
       return;
     }
 
     setLoading(true);
     const data = new FormData();
     data.append('file', file);
-    
     Object.keys(formData).forEach(key => {
-      if (formData[key]) data.append(key, formData[key]);
+      if (formData[key] !== null && formData[key] !== undefined) data.append(key, formData[key]);
     });
 
     try {
@@ -50,11 +42,15 @@ const ReduceSizeMBTool = () => {
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        setResult(url);
-        toast.success('Image processed successfully!');
+        const originalMB = (file.size / 1024 / 1024).toFixed(2);
+        const compressedMB = (blob.size / 1024 / 1024).toFixed(2);
+        const savings = ((file.size - blob.size) / 1024 / 1024).toFixed(2);
+        const savingsPct = ((file.size - blob.size) / file.size * 100).toFixed(1);
+        setResult({ url, originalMB, compressedMB, savings, savingsPct });
+        toast.success(`Compressed to ${compressedMB} MB (saved ${savings} MB)`);
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Processing failed');
+        toast.error(error.error || error.message || 'Processing failed');
       }
     } catch (error) {
       toast.error('An error occurred');
@@ -65,10 +61,11 @@ const ReduceSizeMBTool = () => {
   };
 
   const handleDownload = () => {
-    if (result) {
+    if (result?.url) {
       const a = document.createElement('a');
-      a.href = result;
-      a.download = 'reduce-size-mb-' + Date.now() + '.jpg';
+      a.href = result.url;
+      const ext = formData.format === 'webp' ? '.webp' : '.jpg';
+      a.download = `compressed_${formData.targetMB}mb_${Date.now()}${ext}`;
       a.click();
     }
   };
@@ -87,14 +84,13 @@ const ReduceSizeMBTool = () => {
             </svg>
             Back to Dashboard
           </button>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Reduce Size MB</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Process your images with professional quality</p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Reduce Image Size in MB</h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Compress your images to an exact size in megabytes</p>
           <span className="inline-block mt-3 px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
-            Image Editing
+            Compression
           </span>
         </div>
 
-        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upload Section */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
@@ -104,45 +100,71 @@ const ReduceSizeMBTool = () => {
               </svg>
               Upload Image
             </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* File Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Select Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-indigo-500 transition-colors cursor-pointer"
-                />
-              </div>
 
-              {/* Preview */}
-              {preview && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Preview</p>
-                  <img src={preview} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <FileUploadZone
+                file={file}
+                onFileSelect={(selectedFile) => {
+                  if (selectedFile) {
+                    setFile(selectedFile);
+                    const reader = new FileReader();
+                    reader.onloadend = () => setPreview(reader.result);
+                    reader.readAsDataURL(selectedFile);
+                    setFileInfo({
+                      name: selectedFile.name,
+                      size: (selectedFile.size / 1024 / 1024).toFixed(2),
+                      type: selectedFile.type
+                    });
+                  } else {
+                    setFile(null); setPreview(null); setFileInfo(null);
+                  }
+                }}
+                preview={preview}
+                accept="image/*"
+              />
+
+              {fileInfo && (
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg">
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">File Information</h3>
+                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <p><span className="font-medium">Name:</span> {fileInfo.name}</p>
+                    <p><span className="font-medium">Size:</span> {fileInfo.size} MB</p>
+                    <p><span className="font-medium">Type:</span> {fileInfo.type}</p>
+                  </div>
                 </div>
               )}
 
-              
-              {/* Target M B */}
+              {/* Target Size */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Target M B
+                  Target Size (MB)
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={formData.targetMB}
-                  onChange={(e) => setFormData({...formData, targetMB: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, targetMB: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Enter target m b"
+                  placeholder="e.g. 1.5"
+                  min="0.01"
+                  step="0.1"
                 />
               </div>
 
-              {/* Submit Button */}
+              {/* Format */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Output Format
+                </label>
+                <select
+                  value={formData.format}
+                  onChange={(e) => setFormData({ ...formData, format: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="jpeg">JPEG</option>
+                  <option value="webp">WebP</option>
+                </select>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading || !file}
@@ -154,9 +176,9 @@ const ReduceSizeMBTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Processing...
+                    Compressing...
                   </span>
-                ) : 'Process Image'}
+                ) : 'Compress Image'}
               </button>
             </form>
           </div>
@@ -169,10 +191,19 @@ const ReduceSizeMBTool = () => {
               </svg>
               Result
             </h2>
-            
+
             {result ? (
               <div className="space-y-6">
-                <img src={result} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                <img src={result.url} alt="Result" className="w-full h-80 object-contain rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600" />
+                <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">
+                  <h3 className="font-medium text-green-800 dark:text-green-200 mb-2">Compression Results</h3>
+                  <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                    <p><span className="font-medium">Original Size:</span> {result.originalMB} MB</p>
+                    <p><span className="font-medium">Compressed Size:</span> {result.compressedMB} MB</p>
+                    <p><span className="font-medium">Space Saved:</span> {result.savings} MB ({result.savingsPct}%)</p>
+                    <p><span className="font-medium">Target:</span> {formData.targetMB} MB</p>
+                  </div>
+                </div>
                 <button
                   onClick={handleDownload}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
@@ -180,7 +211,7 @@ const ReduceSizeMBTool = () => {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Download Image
+                  Download Compressed Image
                 </button>
               </div>
             ) : (
@@ -191,15 +222,17 @@ const ReduceSizeMBTool = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">Processing your image...</p>
+                    <p className="text-gray-600 dark:text-gray-300 font-medium">Compressing your image...</p>
                   </>
                 ) : (
                   <>
-                    <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg className="w-20 h-20 text-gray-400 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+                      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                      <polyline points="21 15 16 10 5 21" stroke="currentColor" strokeWidth="1.5" fill="none"/>
                     </svg>
                     <p className="text-gray-500 dark:text-gray-400 text-center text-base px-8">
-                      Upload and process a photo to see results
+                      Upload an image and set a target size in MB to compress
                     </p>
                   </>
                 )}

@@ -36,7 +36,7 @@ export const sendPasswordResetEmail = async (toEmail, resetToken, resetUrl) => {
                 <!-- Header -->
                 <tr>
                   <td style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:36px 40px 28px;text-align:center;">
-                    <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">🔐 CHUTKI</h1>
+                    <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">[SECURE] CHUTKI</h1>
                     <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Image Processing Tools</p>
                   </td>
                 </tr>
@@ -104,6 +104,6 @@ export const sendPasswordResetEmail = async (toEmail, resetToken, resetUrl) => {
     throw new Error(`Failed to send email: ${error.message}`);
   }
 
-  console.log(`[EMAIL] ✅ Password reset email sent to ${toEmail} (id: ${data?.id})`);
+  console.log(`[EMAIL] [OK] Password reset email sent to ${toEmail} (id: ${data?.id})`);
   return data;
 };

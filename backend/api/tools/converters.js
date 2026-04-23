@@ -31,7 +31,7 @@ const compressToSize = async (buffer, targetBytes, format = 'jpeg') => {
 };
 
 // ── POST /api/convert/:tool ─────────────────────────────────────────────────────
-router.post('/:tool', upload.any(), async (req, res) => {
+router.post('/:tool', async (req, res, next) => {
   try {
     const { tool } = req.params;
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
@@ -110,11 +110,24 @@ router.post('/:tool', upload.any(), async (req, res) => {
       }
 
       // ── PDF → JPG ───────────────────────────────────────────────────────────
-      case 'pdf-to-jpg':
+      case 'pdf-to-jpg': {
         if (!fileBuffer) return res.status(400).json({ error: 'No file provided' });
-        processedBuffer = await sharp(fileBuffer).jpeg({ quality: 90 }).toBuffer();
-        filename = customFilename ? `${customFilename}.jpg` : `pdf_to_jpg_${Date.now()}.jpg`;
+        // Check if input is actually a PDF
+        const isPDF = fileBuffer[0] === 0x25 && fileBuffer[1] === 0x50; // %P
+        if (isPDF) {
+          return res.status(400).json({
+            error: 'PDF to JPG conversion requires pdf2pic. Please use the online version at chutki-image-processing-tools.vercel.app for PDF conversion, or upload a JPG/PNG image directly.'
+          });
+        }
+        // If it's already an image, just convert to JPEG
+        try {
+          processedBuffer = await sharp(fileBuffer).jpeg({ quality: 90 }).toBuffer();
+          filename = customFilename ? `${customFilename}.jpg` : `pdf_to_jpg_${Date.now()}.jpg`;
+        } catch (e) {
+          return res.status(400).json({ error: 'Could not process this file. Please upload a valid image or use the online version for PDFs.' });
+        }
         break;
+      }
 
       // ── JPG → PDF (size-limited) ────────────────────────────────────────────
       case 'jpg-to-pdf-50kb':
@@ -125,10 +138,13 @@ router.post('/:tool', upload.any(), async (req, res) => {
         if (!fileBuffer) return res.status(400).json({ error: 'No file provided' });
         const match = tool.match(/(\d+)kb/);
         const targetKB = match ? parseInt(match[1]) : 100;
-        const compressed = await compressToSize(fileBuffer, targetKB * 800);
+        const targetBytes = targetKB * 1024;
+        // PDF has ~10-15KB overhead for document structure, leave room for it
+        const imageBudget = Math.max(10 * 1024, targetBytes - 15 * 1024);
+        const compressed = await compressToSize(fileBuffer, imageBudget);
         const meta = await sharp(compressed).metadata();
 
-        const pdfBuffer = await new Promise((resolve, reject) => {
+        let pdfBuffer = await new Promise((resolve, reject) => {
           const pdfDoc = new PDFDocument({ autoFirstPage: false });
           const chunks = [];
           pdfDoc.on('data', c => chunks.push(c));
@@ -139,6 +155,23 @@ router.post('/:tool', upload.any(), async (req, res) => {
           pdfDoc.end();
         });
 
+        // If PDF is still over target, compress image more aggressively
+        if (pdfBuffer.length > targetBytes) {
+          const aggressiveBudget = Math.max(5 * 1024, targetBytes - pdfBuffer.length + imageBudget - 5 * 1024);
+          const reCompressed = await compressToSize(fileBuffer, aggressiveBudget);
+          const reMeta = await sharp(reCompressed).metadata();
+          pdfBuffer = await new Promise((resolve, reject) => {
+            const pdfDoc2 = new PDFDocument({ autoFirstPage: false });
+            const chunks2 = [];
+            pdfDoc2.on('data', c => chunks2.push(c));
+            pdfDoc2.on('end', () => resolve(Buffer.concat(chunks2)));
+            pdfDoc2.on('error', reject);
+            pdfDoc2.addPage({ size: [reMeta.width + 40, reMeta.height + 40], margin: 20 });
+            pdfDoc2.image(reCompressed, 20, 20, { width: reMeta.width, height: reMeta.height });
+            pdfDoc2.end();
+          });
+        }
+
         res.set({
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="image_${targetKB}kb_${Date.now()}.pdf"`
@@ -148,7 +181,7 @@ router.post('/:tool', upload.any(), async (req, res) => {
       }
 
       default:
-        return res.status(400).json({ error: `Converter tool '${tool}' not supported` });
+        return next();
     }
 
     res.setHeader('Content-Type', contentType);
