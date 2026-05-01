@@ -128,7 +128,7 @@ const HEICtoJPGTool = () => {
                 file={file}
                 onFileSelect={handleFileChange}
                 preview={preview}
-                accept="image/*"
+                accept="image/heic, image/heif"
               />
 
               {/* File Info */}

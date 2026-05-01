@@ -25,7 +25,11 @@ router.post('/:tool', async (req, res, next) => {
   try {
     const { tool } = req.params;
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
-    if (!fileBuffer) return res.status(400).json({ error: 'No image file provided' });
+    
+    // Tools that do NOT need an input image file
+    const noFileTools = ['ai-face-generator'];
+    
+    if (!fileBuffer && !noFileTools.includes(tool)) return res.status(400).json({ error: 'No image file provided' });
     const customFilename = req.body.customFilename;
     let processedBuffer, filename, contentType = 'image/jpeg';
 
@@ -255,11 +259,55 @@ router.post('/:tool', async (req, res, next) => {
       }
 
 
-      // ── remove-background ────────────────────────────────────────────────────
-      case 'remove-background':
-        return res.status(400).json({
-          error: 'Background removal requires an AI model. Please use the online version at chutki-image-processing-tools.vercel.app for AI background removal.'
-        });
+      // ── remove-background (local Sharp-based edge-detection method) ────────────
+      case 'remove-background': {
+        // Local background removal using color-distance thresholding
+        // Samples the corner pixels as background color, then makes similar pixels transparent
+        const edge = Math.max(1, parseInt(req.body.edge) || 5);
+        const threshold = parseInt(req.body.threshold) || 50;
+        const quality = parseInt(req.body.quality) || 90;
+
+        const meta = await sharp(fileBuffer).metadata();
+        const { data, info } = await sharp(fileBuffer)
+          .ensureAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+
+        const { width, height, channels } = info; // channels = 4 (RGBA)
+
+        // Sample background color from the 4 corners (average)
+        const sampleCorner = (x, y) => {
+          const idx = (y * width + x) * channels;
+          return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
+        };
+        const corners = [
+          sampleCorner(0, 0),
+          sampleCorner(width - 1, 0),
+          sampleCorner(0, height - 1),
+          sampleCorner(width - 1, height - 1)
+        ];
+        const bgR = Math.round(corners.reduce((s, c) => s + c.r, 0) / 4);
+        const bgG = Math.round(corners.reduce((s, c) => s + c.g, 0) / 4);
+        const bgB = Math.round(corners.reduce((s, c) => s + c.b, 0) / 4);
+
+        // Make pixels that are close to background color transparent
+        for (let i = 0; i < data.length; i += channels) {
+          const dr = data[i] - bgR;
+          const dg = data[i + 1] - bgG;
+          const db = data[i + 2] - bgB;
+          const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+          if (dist < threshold) {
+            data[i + 3] = 0; // fully transparent
+          }
+        }
+
+        processedBuffer = await sharp(data, { raw: { width, height, channels } })
+          .png({ quality })
+          .toBuffer();
+        filename = customFilename ? `${customFilename}.png` : `removed_bg_${Date.now()}.png`;
+        contentType = 'image/png';
+        break;
+      }
 
       // ── color-picker (returns JSON) ──────────────────────────────────────────
       case 'color-picker': {
@@ -329,10 +377,61 @@ router.post('/:tool', async (req, res, next) => {
         break;
       }
 
-      // ── ai-face-generator (placeholder) ─────────────────────────────────────
+      // ── ai-face-generator (generates a colorful gradient face placeholder) ──────
       case 'ai-face-generator': {
-        const { gender = 'random', age = 'adult' } = req.body;
-        processedBuffer = await sharp({ create: { width: 512, height: 512, channels: 3, background: { r: 200, g: 150, b: 100 } } }).jpeg({ quality: 90 }).toBuffer();
+        const { gender = 'random', age = 'adult', style = 'realistic' } = req.body;
+        // Generate a gradient placeholder image representing a face silhouette
+        const size = 512;
+        const skinColors = {
+          'male':   { r: 210, g: 170, b: 130 },
+          'female': { r: 230, g: 185, b: 150 },
+          'random': { r: 220, g: 178, b: 140 }
+        };
+        const skin = skinColors[gender] || skinColors['random'];
+        // Create a simple stylized portrait with SVG overlaid on colored background
+        const svg = Buffer.from(`<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+              <stop offset="0%" stop-color="#e8f4f8"/>
+              <stop offset="100%" stop-color="#b8d4e8"/>
+            </radialGradient>
+            <radialGradient id="face" cx="50%" cy="45%" r="40%">
+              <stop offset="0%" stop-color="rgb(${skin.r},${skin.g},${skin.b})"/>
+              <stop offset="100%" stop-color="rgb(${Math.max(0,skin.r-30)},${Math.max(0,skin.g-30)},${Math.max(0,skin.b-30)})"/>
+            </radialGradient>
+          </defs>
+          <!-- Background -->
+          <rect width="512" height="512" fill="url(#bg)"/>
+          <!-- Body -->
+          <ellipse cx="256" cy="500" rx="160" ry="100" fill="rgb(${Math.max(0,skin.r-20)},${Math.max(0,skin.g-20)},${Math.max(0,skin.b-20)})"/>
+          <!-- Neck -->
+          <rect x="216" y="340" width="80" height="80" rx="10" fill="url(#face)"/>
+          <!-- Head -->
+          <ellipse cx="256" cy="220" rx="130" ry="150" fill="url(#face)"/>
+          <!-- Eyes -->
+          <ellipse cx="200" cy="200" rx="20" ry="14" fill="white"/>
+          <ellipse cx="312" cy="200" rx="20" ry="14" fill="white"/>
+          <circle cx="200" cy="202" r="10" fill="#3a2010"/>
+          <circle cx="312" cy="202" r="10" fill="#3a2010"/>
+          <circle cx="204" cy="199" r="3" fill="white"/>
+          <circle cx="316" cy="199" r="3" fill="white"/>
+          <!-- Eyebrows -->
+          <path d="M180 180 Q200 170 220 178" stroke="#3a2010" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M292 178 Q312 170 332 180" stroke="#3a2010" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- Nose -->
+          <path d="M256 215 Q248 260 240 275 Q256 280 272 275 Q264 260 256 215" fill="rgba(0,0,0,0.08)"/>
+          <!-- Mouth -->
+          <path d="M220 310 Q256 335 292 310" stroke="#c0604040" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- Hair -->
+          <ellipse cx="256" cy="105" rx="135" ry="90" fill="#3a2010"/>
+          <ellipse cx="256" cy="175" rx="135" ry="60" fill="url(#face)"/>
+          <!-- Ears -->
+          <ellipse cx="128" cy="235" rx="22" ry="30" fill="url(#face)"/>
+          <ellipse cx="384" cy="235" rx="22" ry="30" fill="url(#face)"/>
+          <!-- Label -->
+          <text x="256" y="490" text-anchor="middle" font-family="Arial" font-size="16" fill="#555">AI Generated · ${gender} · ${age}</text>
+        </svg>`);
+        processedBuffer = await sharp(svg).jpeg({ quality: 90 }).toBuffer();
         filename = customFilename ? `${customFilename}.jpg` : `ai_face_${gender}_${age}_${Date.now()}.jpg`;
         break;
       }

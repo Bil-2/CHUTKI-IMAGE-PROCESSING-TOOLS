@@ -33,15 +33,16 @@ export const toolsConfig = {
       description: "Create and enhance signature images",
       endpoint: `${config.API_BASE_URL}/api/tools/generate-signature`,
       method: "POST",
-      fields: ["file", "enhance", "background"]
+      fields: ["file", "style", "enhance", "background", "format"]
     },
     {
       name: "Increase Image Size In KB",
       route: "/tools/increase-size-kb",
-      description: "Increase image file size to meet requirements",
+      description: "Increase image file size to meet minimum requirements",
       endpoint: `${config.API_BASE_URL}/api/tools/increase-size-kb`,
       method: "POST",
-      fields: ["file", "targetKB"]
+      fields: ["file", "targetSize"],
+      defaults: { targetSize: "500" }
     },
     {
       name: "Watermark Images",
@@ -272,10 +273,10 @@ export const toolsConfig = {
     {
       name: "Remove Image Background",
       route: "/tools/remove-background",
-      description: "Remove background from image",
+      description: "Remove background from image automatically",
       endpoint: `${config.API_BASE_URL}/api/tools/remove-background`,
       method: "POST",
-      fields: ["file", "quality", "edge"]
+      fields: ["file", "quality"]
     },
     {
       name: "Resize Image to 4x6",
@@ -494,10 +495,10 @@ export const toolsConfig = {
     {
       name: "Image Compressor",
       route: "/tools/image-compressor",
-      description: "General purpose image compressor",
+      description: "General purpose image compressor with quality control",
       endpoint: `${config.API_BASE_URL}/api/tools/image-compressor`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file", "quality", "format"]
     },
     {
       name: "Reduce Image Size in MB",
@@ -513,7 +514,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 5KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-5kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 10kb",
@@ -521,7 +522,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 10KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-10kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image To 15kb",
@@ -529,7 +530,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 15KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-15kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image To 20kb",
@@ -537,7 +538,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 20KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-20kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image Between 20kb to 50kb",
@@ -553,7 +554,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 25KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-25kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 30kb",
@@ -561,7 +562,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 30KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-30kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 40kb",
@@ -569,7 +570,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 40KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-40kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image to 50kb",
@@ -577,7 +578,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 50KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-50kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image to 100kb",
@@ -585,7 +586,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 100KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-100kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 150kb",
@@ -593,7 +594,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 150KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-150kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image To 200kb",
@@ -601,7 +602,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 200KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-200kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 300kb",
@@ -609,7 +610,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 300KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-300kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress JPEG To 500kb",
@@ -617,7 +618,7 @@ export const toolsConfig = {
       description: "Compress JPEG to exactly 500KB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-500kb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image To 1 MB",
@@ -625,7 +626,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 1MB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-1mb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "Compress Image To 2 MB",
@@ -633,7 +634,7 @@ export const toolsConfig = {
       description: "Compress image to exactly 2MB",
       endpoint: `${config.API_BASE_URL}/api/tools/compress-2mb`,
       method: "POST",
-      fields: ["file", "quality"]
+      fields: ["file"]
     },
     {
       name: "JPG To KB Convert",

@@ -374,7 +374,7 @@ const PassportPhotoTool = () => {
                 file={file}
                 onFileSelect={handleFileChange}
                 preview={preview}
-                accept="image/*"
+                accept="image/jpeg, image/png"
               />
 
               {/* File Info */}

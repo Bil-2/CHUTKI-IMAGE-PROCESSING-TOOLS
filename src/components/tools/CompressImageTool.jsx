@@ -133,7 +133,7 @@ const CompressImageTool = () => {
                 file={file}
                 onFileSelect={handleFileChange}
                 preview={preview}
-                accept="image/*"
+                accept="image/jpeg, image/png, image/webp, image/bmp, image/tiff"
               />
 
               {/* File Info */}

@@ -158,8 +158,8 @@ const FlipImageTool = () => {
       title="Flip Image"
       description="Mirror your image horizontally or vertically with perfect quality"
       endpoint={`${config.API_BASE_URL}/api/tools/flip`}
-      acceptedFormats="image/*"
-      maxFileSize={10}
+      acceptedFormats="image/jpeg, image/png, image/webp, image/tiff, image/avif"
+      maxFileSize={20}
     >
       <FlipImageSettings />
     </ToolLayout>

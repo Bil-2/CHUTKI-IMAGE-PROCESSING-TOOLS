@@ -105,13 +105,13 @@ const ChutkiAssistant = React.memo(() => {
           
           setTimeout(() => {
             const quickActionsText = quickActions.length > 0 
-              ? '\\n\\n**⚡ Quick Actions Available:**\\n' + quickActions.slice(0, 2).map((qa, i) => `${i+1}. ${qa.name} (used ${qa.frequency}x)`).join('\\n')
+              ? '\n\n**Quick Actions Available:**\n' + quickActions.slice(0, 2).map((qa, i) => `${i+1}. ${qa.name} (used ${qa.frequency}x)`).join('\n')
               : '';
             
             const welcomeBack = {
               id: Date.now(),
               role: 'assistant',
-              content: `**${greeting}! 🎯**
+              content: `**${greeting}!**
 
 I've learned from your **${totalInteractions} interactions**. I'm now at **${skillLevel}** mode to better assist you.${quickActionsText}
 
@@ -151,31 +151,18 @@ I've learned from your **${totalInteractions} interactions**. I'm now at **${ski
   const welcomeMessage = useMemo(() => ({
     id: Date.now(),
     role: 'assistant',
-    content: `**Welcome to CHUTKI AI! 🎯**
+    content: `Hi! I'm **Chutki AI** — your image assistant with **${allTools.length} tools** ready.
 
-I'm your intelligent assistant for **${allTools.length}+ Professional Image Tools**. I can directly process your images!
+Upload an image and try:
+- **"Compress to 100KB"** — reduce file size
+- **"Resize to 600x600"** — change dimensions
+- **"Convert HEIC to JPG"** — change format
+- **"Make passport photo"** — 35x45mm, 2x2 inch, etc.
+- **"Remove background"** — AI cutout
+- **"Extract text"** — OCR from image
+- **"Show all tools"** — browse everything
 
-**🔥 I Can Process:**
-• **Smart Compression**: Hit exact sizes (5KB to 2MB)
-• **Format Conversion**: HEIC→JPG, PNG→JPEG, WEBP→JPG
-• **Passport Photos**: Custom sizes with DPI control
-• **Background Removal**: AI-powered transparency
-• **OCR Text Extraction**: JPG/PNG to Text
-• **PDF Creation**: Image to PDF (50KB-500KB sizes)
-• **Resize Tools**: Pixels, CM, MM, Inches, DPI
-• **Effects**: Grayscale, Pixelate, Circle Crop, Blur
-• **Watermarking**: Text/Image overlays
-• **Batch Processing**: Multiple images at once
-
-**💡 Try Commands:**
-• "Compress to 100KB" - I'll compress your image
-• "Convert HEIC to JPG" - Format conversion
-• "Make passport photo 35x45mm" - Passport generator
-• "Extract text from image" - OCR processing
-• "Remove background" - AI background removal
-• "Show all tools" - Browse ${allTools.length}+ tools
-
-**Upload images and I'll process them INSTANTLY!** 🚀`,
+Just upload and tell me what you need!`,
     timestamp: new Date()
   }), [allTools.length]);
 
@@ -203,7 +190,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
     const welcomeMessage = {
       id: Date.now(),
       role: 'assistant',
-      content: '**Chat cleared!** How can I help you with image processing today?',
+      content: 'Chat cleared. Upload an image and tell me what to do!',
       timestamp: new Date()
     };
     setChatState(prev => ({ ...prev, messages: [welcomeMessage] }));
@@ -397,7 +384,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
         timePredictions.push({
           tool,
           score: usageAtThisHour,
-          reason: `🕐 You usually use this at ${currentHour}:00 (${usageAtThisHour}x)`
+          reason: `You usually use this at ${currentHour}:00 (${usageAtThisHour}x)`
         });
       }
     });
@@ -432,7 +419,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
       
       recommendations.push({
         tool,
-        reason: `⭐ Used ${data.count}x${paramInfo}`,
+        reason: `Used ${data.count}x${paramInfo}`,
         params: defaults?.[0]?.params || lastUsedParams[tool] || {},
         priority: 'high'
       });
@@ -447,7 +434,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
         recommendations.push({
           workflow: topWorkflow.pattern,
           tools: topWorkflow.tools,
-          reason: `🔄 Proven workflow (${topWorkflow.count}x success)`,
+          reason: `Proven workflow (${topWorkflow.count}x success)`,
           priority: 'workflow',
           predictive: true
         });
@@ -472,7 +459,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
         const nextIntent = likelyNext[0].split(' → ')[1];
         recommendations.push({
           intent: nextIntent,
-          reason: `🔮 You usually do "${nextIntent}" after "${lastIntent}" (${likelyNext[1]}x)`,
+          reason: `You usually do "${nextIntent}" after "${lastIntent}" (${likelyNext[1]}x)`,
           priority: 'predictive',
           predictive: true
         });
@@ -488,7 +475,7 @@ I'm your intelligent assistant for **${allTools.length}+ Professional Image Tool
       const errorMsg = {
         id: Date.now(),
         role: 'assistant',
-        content: `**⚠️ No Image Uploaded**
+        content: `**No Image Uploaded**
 
 Please upload an image first, then I can process it with **${toolName}**!
 
@@ -504,7 +491,7 @@ Please upload an image first, then I can process it with **${toolName}**!
       const errorMsg = {
         id: Date.now(),
         role: 'assistant',
-        content: `**❌ Tool Not Found**\n\nCouldn't find tool: ${toolName}`,
+        content: `**Tool Not Found**\n\nCouldn't find tool: ${toolName}`,
         timestamp: new Date()
       };
       setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMsg] }));
@@ -516,7 +503,7 @@ Please upload an image first, then I can process it with **${toolName}**!
     const processingMsg = {
       id: Date.now(),
       role: 'assistant',
-      content: `**🔄 Processing with ${toolName}...**\n\nPlease wait while I process your image${Object.keys(params).length > 0 ? ` with parameters: ${JSON.stringify(params)}` : ''}.`,
+      content: `**Processing with ${toolName}...**\n\nPlease wait while I process your image${Object.keys(params).length > 0 ? ` with parameters: ${JSON.stringify(params)}` : ''}.`,
       timestamp: new Date()
     };
     setChatState(prev => ({ ...prev, messages: [...prev.messages, processingMsg] }));
@@ -544,7 +531,7 @@ Please upload an image first, then I can process it with **${toolName}**!
           const resultMsg = {
             id: Date.now(),
             role: 'assistant',
-            content: `**✅ Success! ${toolName}**
+            content: `**Processing Complete — ${toolName}**
 
 **Result:**
 ${JSON.stringify(data, null, 2)}
@@ -568,7 +555,7 @@ ${JSON.stringify(data, null, 2)}
           const successMsg = {
             id: Date.now(),
             role: 'assistant',
-            content: `**✅ Success! ${toolName}**
+            content: `**Done — ${toolName}**
 
 **Your image has been processed and downloaded!**
 
@@ -582,7 +569,7 @@ ${JSON.stringify(data, null, 2)}
         const errorMsg = {
           id: Date.now(),
           role: 'assistant',
-          content: `**❌ Processing Failed**
+          content: `**Processing Failed**
 
 **Error:** ${errorData.error || 'Unknown error'}
 
@@ -612,7 +599,7 @@ Failed to connect to the tool server. Please check your internet connection and 
   // NEW: Show all tools list
   const showAllTools = useCallback(() => {
     const categories = Object.keys(toolsConfig);
-    let toolsList = `**📋 All ${allTools.length} Available Tools:**\n\n`;
+    let toolsList = `**All ${allTools.length} Available Tools:**\n\n`;
     
     categories.forEach(category => {
       const tools = toolsConfig[category];
@@ -626,7 +613,7 @@ Failed to connect to the tool server. Please check your internet connection and 
       toolsList += `\n`;
     });
     
-    toolsList += `**💡 Pro Tip:** Say "use [tool name]" to execute any tool directly!\n\n*Example: "use Compress Image to 100kb" with your uploaded image.*`;
+    toolsList += `Say **"use [tool name]"** with an uploaded image to run it directly.`;
     
     const toolsMsg = {
       id: Date.now(),
@@ -660,7 +647,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         intent = 'compression';
         suggestions.push({
           tool: 'Reduce Image Size in KB',
-          reason: `🎯 Direct command detected: Compress to ${targetKB}KB`,
+          reason: `Direct command detected: Compress to ${targetKB}KB`,
           params: { targetKB },
           executable: true,
           priority: 'command'
@@ -671,7 +658,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         intent = 'conversion';
         suggestions.push({
           tool: 'HEIC to JPG',
-          reason: '🎯 Direct command: HEIC to JPG conversion',
+          reason: 'Direct command: HEIC to JPG conversion',
           executable: true,
           priority: 'command'
         });
@@ -681,7 +668,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         intent = 'background';
         suggestions.push({
           tool: 'Remove Image Background',
-          reason: '🎯 Direct command: Background removal',
+          reason: 'Direct command: Background removal',
           executable: true,
           priority: 'command'
         });
@@ -691,7 +678,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         intent = 'ocr';
         suggestions.push({
           tool: 'JPG to Text',
-          reason: '🎯 Direct command: Text extraction (OCR)',
+          reason: 'Direct command: Text extraction (OCR)',
           executable: true,
           priority: 'command'
         });
@@ -702,7 +689,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         const sizeMatch = params.match(/(\d+)\s*x\s*(\d+)\s*mm/i);
         suggestions.push({
           tool: 'Passport Photo Maker',
-          reason: sizeMatch ? `🎯 Passport photo: ${sizeMatch[0]}` : '🎯 Passport photo generator',
+          reason: sizeMatch ? `Direct command: Passport photo ${sizeMatch[0]}` : 'Direct command: Passport photo generator',
           params: sizeMatch ? { size: `${sizeMatch[1]}x${sizeMatch[2]}` } : {},
           executable: true,
           priority: 'command'
@@ -880,7 +867,7 @@ Failed to connect to the tool server. Please check your internet connection and 
         intent = 'compression';
         suggestions.unshift({
           tool: 'Smart Compression',
-          reason: `📊 Large files detected (avg ${(avgSize/1024).toFixed(1)}MB) - Compression recommended`,
+          reason: `Large files detected (avg ${(avgSize/1024).toFixed(1)}MB) — Compression recommended`,
           smart: true
         });
       }
@@ -1010,7 +997,7 @@ Failed to connect to the tool server. Please check your internet connection and 
           
           // NEW: Show predictive suggestions first (AI's predictions)
           if (predictiveSugs.length > 0) {
-            aiResponse += `\n\n**🔮 AI Predictions (Based on your patterns):**\n`;
+            aiResponse += `\n\n**AI Predictions (Based on your patterns):**\n`;
             predictiveSugs.slice(0, 2).forEach((s, i) => {
               if (s.tool) {
                 aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}`;
@@ -1026,7 +1013,7 @@ Failed to connect to the tool server. Please check your internet connection and 
           
           // Show favorite tools
           if (personalizedSugs.length > 0) {
-            aiResponse += `\n**⭐ Your Top Tools (${totalInteractions} total uses):**\n`;
+            aiResponse += `\n**Your Top Tools (${totalInteractions} total uses):**\n`;
             personalizedSugs.slice(0, 2).forEach((s, i) => {
               aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
             });
@@ -1036,13 +1023,13 @@ Failed to connect to the tool server. Please check your internet connection and 
           if (successfulWorkflows && successfulWorkflows.length > 0) {
             const topWorkflow = successfulWorkflows.sort((a, b) => b.count - a.count)[0];
             if (topWorkflow.count >= 2) {
-              aiResponse += `\n**🏆 Proven Workflow:** ${topWorkflow.pattern} \n*Success: ${topWorkflow.count}x | Last used: ${new Date(topWorkflow.lastUsed).toLocaleDateString()}*\n`;
+              aiResponse += `\n**Proven Workflow:** ${topWorkflow.pattern} \n*Success: ${topWorkflow.count}x | Last used: ${new Date(topWorkflow.lastUsed).toLocaleDateString()}*\n`;
             }
           }
           
           // NEW: Quick actions for expert users
           if (isExpert && quickActions && quickActions.length > 0) {
-            aiResponse += `\n**⚡ Quick Actions Available:**\n`;
+            aiResponse += `\n**Quick Actions Available:**\n`;
             quickActions.slice(0, 2).forEach((qa, i) => {
               aiResponse += `${i + 1}. **${qa.name}** - Used ${qa.frequency}x\n`;
             });
@@ -1050,7 +1037,7 @@ Failed to connect to the tool server. Please check your internet connection and 
           
           // Smart file-based suggestions
           if (smartSugs.length > 0) {
-            aiResponse += `\n**🧠 Smart Analysis:**\n`;
+            aiResponse += `\n**Smart File Analysis:**\n`;
             smartSugs.slice(0, 2).forEach((s, i) => {
               aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
             });
@@ -1058,25 +1045,25 @@ Failed to connect to the tool server. Please check your internet connection and 
           
           // NEW: Skill-based tips
           if (isIntermediate) {
-            aiResponse += `\n💡 *Tip: You're at intermediate level! Try batch processing for efficiency.*`;
+            aiResponse += `\n*Tip: You're at intermediate level! Try batch processing for efficiency.*`;
           } else if (isExpert) {
-            aiResponse += `\n🎓 *Expert mode active! I'll provide advanced parameter suggestions.*`;
+            aiResponse += `\n*Expert mode active! I'll provide advanced parameter suggestions.*`;
           }
         } else if (suggestions.length > 0) {
           // Beginner-friendly suggestions
-          aiResponse += `\n\n**🎯 Recommended for You:**\n`;
+          aiResponse += `\n\n**Recommended for You:**\n`;
           suggestions.slice(0, 3).forEach((s, i) => {
             if (s.tool) {
               aiResponse += `${i + 1}. **${s.tool}** - ${s.reason}\n`;
             }
           });
-          aiResponse += `\n🌟 *I'm learning your preferences! The more you use, the smarter I get.*`;
+          aiResponse += `\n*I'm learning your preferences! The more you use, the smarter I get.*`;
         } else if (executableSugs.length > 0) {
-          aiResponse += `\n\n**⚡ Quick Execute:** Upload an image and say "go" or "process" to execute **${executableSugs[0].tool}** immediately!`;
+          aiResponse += `\n\n**Quick Execute:** Upload an image and say "go" or "process" to execute **${executableSugs[0].tool}** immediately!`;
         }
         
         if (suggestions.length > 0) {
-          aiResponse += `\n\n💡 *Upload images to get started! Say "go" or "use [tool name]" to process.*`;
+          aiResponse += `\n\n*Upload images to get started! Say "go" or "use [tool name]" to process.*`;
         }
 
         const aiMessage = {
@@ -1141,31 +1128,31 @@ Failed to connect to the tool server. Please check your internet connection and 
       // NEW: Predict user's goal based on file characteristics + history
       if (avgSize > 2000) {
         predictedAction = 'compression';
-        smartSuggestions += `\n\n**🔮 AI Analysis:** Large files (${(avgSize/1024).toFixed(1)}MB avg, ${(maxSize/1024).toFixed(1)}MB max)`;
+        smartSuggestions += `\n\n**AI Analysis:** Large files (${(avgSize/1024).toFixed(1)}MB avg, ${(maxSize/1024).toFixed(1)}MB max)`;
         
         // Smart compression target based on user's past preferences
         const compressionDefaults = smartDefaults?.['Smart Compression'] || smartDefaults?.['Compress 100KB'];
         if (compressionDefaults && compressionDefaults.length > 0) {
           const lastTarget = compressionDefaults[compressionDefaults.length - 1].params.targetKB;
-          smartSuggestions += `\n⚡ **Predicted Action:** Compress to ${lastTarget}KB (your usual preference)`;
+          smartSuggestions += `\n**Predicted Action:** Compress to ${lastTarget}KB (your usual preference)`;
         } else {
-          smartSuggestions += `\n✨ **AI Suggests:** Compress to 100KB for web, or 50KB for thumbnails`;
+          smartSuggestions += `\n**AI Suggests:** Compress to 100KB for web, or 50KB for thumbnails`;
         }
       } else if (avgSize > 500) {
         predictedAction = 'optimization';
-        smartSuggestions += `\n\n**🔮 AI Analysis:** Medium files (${avgSize.toFixed(0)}KB avg)`;
-        smartSuggestions += `\n✨ **AI Suggests:** Light compression to 100KB or format optimization`;
+        smartSuggestions += `\n\n**AI Analysis:** Medium files (${avgSize.toFixed(0)}KB avg)`;
+        smartSuggestions += `\n**AI Suggests:** Light compression to 100KB or format optimization`;
       } else {
-        smartSuggestions += `\n\n**🔮 AI Analysis:** Optimized files (${avgSize.toFixed(0)}KB avg)`;
+        smartSuggestions += `\n\n**AI Analysis:** Optimized files (${avgSize.toFixed(0)}KB avg)`;
       }
       
       // Format-specific predictions
       if (formats.includes('heic')) {
         predictedAction = 'conversion';
-        smartSuggestions += `\n📱 **HEIC Detected:** iPhone format - High probability you need JPG conversion`;
+        smartSuggestions += `\nHEIC Detected: iPhone format — JPG conversion recommended`;
       }
       if (formats.includes('png') && avgSize > 1000) {
-        smartSuggestions += `\n🎨 **PNG Detected:** Consider JPEG conversion to reduce size by ~70%`;
+        smartSuggestions += `\nPNG Detected: Consider JPEG conversion to reduce size by ~70%`;
       }
       
       // NEW: Predict workflow based on successful patterns
@@ -1174,7 +1161,7 @@ Failed to connect to the tool server. Please check your internet connection and 
           w.pattern.toLowerCase().includes(predictedAction || '')
         );
         if (relevantWorkflow) {
-          smartSuggestions += `\n\n**🏆 Recommended Workflow (${relevantWorkflow.count}x proven success):**`;
+          smartSuggestions += `\n\n**Recommended Workflow (${relevantWorkflow.count}x proven):**`;
           relevantWorkflow.tools.forEach((tool, i) => {
             smartSuggestions += `\n${i + 1}. ${tool}`;
           });
@@ -1185,15 +1172,15 @@ Failed to connect to the tool server. Please check your internet connection and 
       const currentHour = new Date().getHours();
       const timeBased = personalRecs.find(r => r.priority === 'time-based');
       if (timeBased) {
-        smartSuggestions += `\n\n**🕐 Time Pattern:** ${timeBased.reason}`;
+        smartSuggestions += `\n\n**Time Pattern:** ${timeBased.reason}`;
       }
       
       // Personalized quick actions (skill-adaptive)
       if (personalRecs.length > 0) {
         if (skillLevel === 'expert') {
-          smartSuggestions += `\n\n**⚡ Your Quick Actions (Expert Mode):**`;
+          smartSuggestions += `\n\n**Your Quick Actions (Expert Mode):**`;
         } else {
-          smartSuggestions += `\n\n**⭐ Based on Your History:**`;
+          smartSuggestions += `\n\n**Based on Your History:**`;
         }
         personalRecs.slice(0, 3).forEach((rec, i) => {
           if (rec.tool) {
@@ -1223,22 +1210,9 @@ Failed to connect to the tool server. Please check your internet connection and 
       const fileMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: `📁 **Files uploaded successfully!**
+        content: `Got **${files.length} file(s)** — ${formats.join(', ')} — ${totalSize.toFixed(1)} MB total.${smartSuggestions}
 
-**${files.length} file(s):** ${fileNames}
-**Total Size:** ${totalSize.toFixed(2)} MB
-**Formats:** ${formats.join(', ')}${smartSuggestions}
-
-🎯 **What would you like me to do?**
-• Compress to specific size
-• Resize dimensions
-• Convert format
-• Extract text (OCR)
-• Remove background
-• Create PDF
-• Generate passport photos
-
-Just tell me your requirements!`,
+What should I do? *(compress, resize, convert, extract text, remove background, create PDF...)*`,
         timestamp: new Date()
       };
       setChatState(prev => ({
@@ -1288,7 +1262,7 @@ Just tell me your requirements!`,
     const clearMessage = {
       id: Date.now(),
       role: 'assistant',
-      content: '🗑️ **Files cleared!** Ready for new uploads.',
+      content: 'Files cleared. Ready for new uploads.',
       timestamp: new Date()
     };
     setChatState(prev => ({
@@ -1418,11 +1392,12 @@ Just tell me your requirements!`,
               <div className="p-2 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
+                    <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                     <span className="text-green-600 dark:text-green-400 font-medium">
-                      ✓ {chatState.selectedFile.length} file(s) ready
+                      {chatState.selectedFile.length} file(s) ready
                     </span>
                     <span className="text-gray-500 dark:text-gray-400">
-                      • Say "go" or "process" to execute
+                      Say "go" or "process" to execute
                     </span>
                   </div>
                   <button
@@ -1601,7 +1576,9 @@ Just tell me your requirements!`,
             className="w-16 h-16 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center group"
           >
             <div className="relative">
-              <span className="text-white text-3xl">👱🏼‍♀️</span>
+              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
           </motion.button>

@@ -14,7 +14,9 @@ router.post('/:tool', async (req, res, next) => {
   try {
     const { tool } = req.params;
     const fileBuffer = req.files?.[0]?.buffer || req.file?.buffer;
-    if (!fileBuffer) return res.status(400).json({ error: 'No image file provided' });
+    // Pass through tools that don't require an image file
+    const noFileTools = ['ai-face-generator'];
+    if (!fileBuffer && !noFileTools.includes(req.params.tool)) return res.status(400).json({ error: 'No image file provided' });
     const customFilename = req.body.customFilename;
     let processedBuffer, filename, contentType = 'image/jpeg';
 

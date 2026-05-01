@@ -318,6 +318,10 @@ app.use('/api/ai', aiChatRoutes);
 // Parse multipart forms ONCE for all tool routes to prevent stream-draining hangs
 app.use('/api/tools', upload.any());
 
+// IMPORTANT: passport-photo-advanced MUST come BEFORE editorsRoutes
+// because editorsRoutes uses a wildcard /:tool that would capture it first
+app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
+
 // Compression tools: compress-Xkb, reduce-size-kb, image-compressor, etc.
 app.use('/api/tools', compressorsRoutes);
 // Conversion tools: heic-to-jpg, image-to-pdf, pdf-to-jpg, OCR, etc.
@@ -326,9 +330,6 @@ app.use('/api/tools', convertersRoutes);
 app.use('/api/tools', resizersRoutes);
 // Editor tools: rotate, flip, watermark, circle-crop, grayscale, effects, etc.
 app.use('/api/tools', editorsRoutes);
-
-// Legacy special-case routers (still needed for advanced passport photo)
-app.use('/api/tools/passport-photo-advanced', passportPhotoAdvancedRoutes);
 
 // Cold start prevention status API
 app.use('/api/cold-start', coldStartStatusRoutes);

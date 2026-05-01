@@ -195,8 +195,8 @@ const RotateImageTool = () => {
       title="Rotate Image"
       description="Rotate your image by any angle with customizable background fill"
       endpoint={`${config.API_BASE_URL}/api/tools/rotate`}
-      acceptedFormats="image/*"
-      maxFileSize={10}
+      acceptedFormats="image/jpeg, image/png, image/webp"
+      maxFileSize={15}
     >
       <RotateImageSettings />
     </ToolLayout>
