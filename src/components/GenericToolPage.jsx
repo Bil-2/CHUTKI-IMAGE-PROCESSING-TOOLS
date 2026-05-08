@@ -93,6 +93,24 @@ const GenericToolPage = () => {
     });
   };
 
+  // Helper: fetch with timeout using AbortController
+  const fetchWithTimeout = (url, options, timeoutMs = 60000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  };
+
+  // Helper: wake up Render server before processing (prevents cold-start failures)
+  const wakeUpServer = async () => {
+    try {
+      const apiBase = tool.endpoint.split('/api/')[0];
+      await fetchWithTimeout(`${apiBase}/ping`, {}, 15000);
+    } catch (_) {
+      // Ignore — ping is best-effort only
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const noFileRequired = ['ai-face-generator'];
@@ -105,58 +123,77 @@ const GenericToolPage = () => {
     setError(null);
     setResult(null);
 
-    try {
-      const formDataToSend = new FormData();
-      if (selectedFile) formDataToSend.append("file", selectedFile);
+    // Wake up the server first (handles Render free-tier cold starts)
+    await wakeUpServer();
 
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
-
-      if (customFilename.trim()) {
-        formDataToSend.append('customFilename', customFilename.trim());
+    const formDataToSend = new FormData();
+    if (selectedFile) formDataToSend.append("file", selectedFile);
+    Object.keys(formData).forEach(key => {
+      if (formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
+        formDataToSend.append(key, formData[key]);
       }
-
-      const response = await fetch(tool.endpoint, {
-        method: tool.method,
-        body: formDataToSend,
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await response.json();
-          setResult({ type: 'json', data });
-        } else if (contentType.includes('application/zip')) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const ext = customFilename.trim() ? `${customFilename.trim()}.zip` : `processed-${Date.now()}.zip`;
-          const a = document.createElement('a'); a.href = url; a.download = ext;
-          document.body.appendChild(a); a.click();
-          window.URL.revokeObjectURL(url); document.body.removeChild(a);
-          setResult({ type: 'success', message: 'ZIP downloaded successfully!' });
-        } else if (contentType.includes('application/pdf')) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          setResult({ type: 'pdf', url, filename: customFilename.trim() ? `${customFilename.trim()}.pdf` : `processed-${Date.now()}.pdf` });
-        } else {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const isPng = contentType.includes('png');
-          setResult({ type: 'image', url, filename: customFilename.trim() ? `${customFilename.trim()}.${isPng?'png':'jpg'}` : `processed-${Date.now()}.${isPng?'png':'jpg'}` });
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || "Processing failed");
-      }
-    } catch (err) {
-      setError("An error occurred while processing the file");
-      console.error(err);
-    } finally {
-      setLoading(false);
+    });
+    if (customFilename.trim()) {
+      formDataToSend.append('customFilename', customFilename.trim());
     }
+
+    // Retry up to 2 times to handle intermittent cold-start failures
+    const MAX_RETRIES = 2;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 1) {
+          setError(`⏳ Server is waking up... Retrying (${attempt}/${MAX_RETRIES})`);
+          await new Promise(r => setTimeout(r, 3000)); // Wait 3s before retry
+          setError(null);
+        }
+
+        const response = await fetchWithTimeout(tool.endpoint, {
+          method: tool.method,
+          body: formDataToSend,
+        }, 60000); // 60s timeout per attempt
+
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await response.json();
+            setResult({ type: 'json', data });
+          } else if (contentType.includes('application/zip')) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const ext = customFilename.trim() ? `${customFilename.trim()}.zip` : `processed-${Date.now()}.zip`;
+            const a = document.createElement('a'); a.href = url; a.download = ext;
+            document.body.appendChild(a); a.click();
+            window.URL.revokeObjectURL(url); document.body.removeChild(a);
+            setResult({ type: 'success', message: 'ZIP downloaded successfully!' });
+          } else if (contentType.includes('application/pdf')) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            setResult({ type: 'pdf', url, filename: customFilename.trim() ? `${customFilename.trim()}.pdf` : `processed-${Date.now()}.pdf` });
+          } else {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const isPng = contentType.includes('png');
+            setResult({ type: 'image', url, filename: customFilename.trim() ? `${customFilename.trim()}.${isPng?'png':'jpg'}` : `processed-${Date.now()}.${isPng?'png':'jpg'}` });
+          }
+          lastError = null;
+          break; // Success — stop retrying
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          lastError = errorData.error || `Server error (${response.status})`;
+          if (response.status < 500) break; // Don't retry 4xx errors
+        }
+      } catch (err) {
+        lastError = err.name === 'AbortError'
+          ? 'Request timed out. The server may be starting up — please try again.'
+          : 'Connection failed. Please check your internet and try again.';
+        console.error(`[Attempt ${attempt}] Error:`, err);
+      }
+    }
+
+    if (lastError) setError(lastError);
+    setLoading(false);
   };
 
   const handleDownload = () => {
@@ -494,7 +531,7 @@ const GenericToolPage = () => {
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Processing...</span>
+                  <span>Processing... (may take up to 60s on first use)</span>
                 </div>
               ) : `Process ${tool.name}`}
             </button>
