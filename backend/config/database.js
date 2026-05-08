@@ -14,24 +14,28 @@ const connectDB = async () => {
 
     // MongoDB connection options optimized for Render (remote Atlas)
     const options = {
-      serverSelectionTimeoutMS: 15000, // ↑ 15s for Render→Atlas latency
+      serverSelectionTimeoutMS: 30000, // ↑ 30s for Render→Atlas latency on cold start
       socketTimeoutMS: 60000,
-      connectTimeoutMS: 15000,         // ↑ 15s connect timeout
+      connectTimeoutMS: 30000,         // ↑ 30s connect timeout
       maxPoolSize: 5,
       minPoolSize: 1,
       heartbeatFrequencyMS: 10000,
       retryWrites: true,
       retryReads: true,
-      // family: 4, // Force IPv4 to avoid DNS issues on Render
+      family: 4, // Force IPv4 to avoid IPv6 DNS issues on Render
     };
 
-    // Try different MongoDB connection strings
+    // Use only the cloud MongoDB URI — no localhost fallback in production
     const mongoURIs = [
-      process.env.MONGO_URI,
       process.env.MONGODB_URI,
-      'mongodb://127.0.0.1:27017/chutki',
-      'mongodb://localhost:27017/chutki'
+      process.env.MONGO_URI,
     ].filter(Boolean);
+
+    if (mongoURIs.length === 0) {
+      console.log('[WARNING] No MONGODB_URI provided. Running in standalone mode.');
+      global.DATABASE_CONNECTED = false;
+      return null;
+    }
 
     let connected = false;
     let lastError = null;
@@ -44,7 +48,7 @@ const connectDB = async () => {
         const conn = await Promise.race([
           mongoose.connect(uri, options),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Connection timeout after 6s')), 6000)
+            setTimeout(() => reject(new Error('Connection timeout after 30s')), 30000)
           )
         ]);
 
